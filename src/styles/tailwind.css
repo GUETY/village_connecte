@@ -1,0 +1,241 @@
+/* Styles globaux + composants pour correspondre exactement à la maquette.
+   Importer dans App.jsx : import "../styles/tailwind.css";
+*/
+
+/* Couleurs exactes */
+:root{
+  --vc-purple: #5B1FB4;       /* violet principal (sidebar / header) */
+  --vc-purple-dark: #4A148C;  /* violet foncé (bords) */
+  --vc-orange: #FF8A00;       /* orange principal (boutons) */
+  --vc-orange-dark: #F97316;  /* orange secondaire (bords) */
+  --vc-green: #16A34A;        /* vert (validé) */
+  --vc-red: #EF4444;          /* rouge (échec) */
+  --vc-bg: #F7F7FA;           /* fond général */
+  --vc-white: #FFFFFF;
+  --vc-text: #1F2937;
+}
+
+/* Tailwind layers */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset / base */
+@layer base {
+  html, body, #root {
+    @apply h-full;
+  }
+  body {
+    @apply m-0 text-base;
+    background-color: var(--vc-bg);
+    color: var(--vc-text);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+}
+
+/* Composants réutilisables */
+@layer components {
+  /* Helpers */
+  .sidebar-bg { background: var(--vc-purple); }
+  .header-bg { background: var(--vc-purple); color: var(--vc-white); }
+  .sidebar-icon { color: var(--vc-white); }
+
+  /* Logo rond */
+  .vc-logo {
+    @apply w-10 h-10 rounded-full bg-white flex items-center justify-center flex-shrink-0;
+  }
+
+  /* Carte filtre */
+  .filter-card {
+    @apply rounded-lg px-4 py-3 flex items-center gap-4;
+    border: 2px solid var(--vc-orange);
+    background: var(--vc-white);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .filter-option { @apply flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900; }
+
+  /* Bouton Valider */
+  .btn-validate {
+    @apply text-white px-6 py-2 rounded-md shadow-md font-medium;
+    background: linear-gradient(180deg, var(--vc-orange) 0%, var(--vc-orange-dark) 100%);
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .btn-validate:hover { opacity: 0.95; }
+
+  /* Input recherche */
+  .search-input {
+    @apply rounded-full px-4 py-2 border-2 focus:outline-none;
+    border-color: var(--vc-orange);
+    background: var(--vc-white);
+    color: var(--vc-text);
+  }
+  .search-input:focus {
+    box-shadow: 0 0 0 6px rgba(255,138,0,0.08);
+  }
+
+  /* Bouton Recherche */
+  .btn-search {
+    @apply text-white px-5 py-2 rounded-md font-medium;
+    background: var(--vc-orange);
+  }
+  .btn-search:hover { background: var(--vc-orange-dark); }
+
+  /* TABLEAU SANS FOND BLANC - transparent */
+  .alerts-table-transparent {
+    border: 2px solid var(--vc-orange);
+    border-radius: 8px;
+    overflow: hidden;
+    background: transparent;
+    width: 100%;
+  }
+
+  /* En-tête du tableau */
+  .header-table {
+    display: grid;
+    background: rgba(255,138,0,0.08);
+    border-bottom: 2px solid var(--vc-orange);
+    width: 100%;
+  }
+
+  .cell-header {
+    @apply px-4 py-3 text-sm font-semibold;
+    color: var(--vc-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-right: 1px solid rgba(255,138,0,0.1);
+  }
+  .cell-header:last-child {
+    border-right: none;
+  }
+
+  /* Cellule de données (sans retour à la ligne) */
+  .cell-data {
+    @apply px-4 py-3 text-sm;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-right: 1px solid rgba(255,138,0,0.1);
+  }
+  .cell-data:last-child {
+    border-right: none;
+  }
+
+  /* Traité toggle */
+  .btn-traite { @apply inline-flex items-center justify-center; }
+
+  /* Badges état */
+  .etat-badge {
+    @apply w-8 h-6 flex items-center justify-center rounded text-sm border;
+    border: 1px solid var(--vc-orange-dark);
+    background: transparent;
+    color: var(--vc-orange-dark);
+    cursor: pointer;
+  }
+  .etat-bon { border-color: var(--vc-green); color: var(--vc-green); }
+  .etat-encours { border-color: var(--vc-orange-dark); color: var(--vc-orange-dark); }
+  .etat-echec { border-color: var(--vc-red); color: var(--vc-red); }
+
+  /* Etat actif */
+  .etat-badge.active {
+    @apply text-white;
+    background: var(--vc-orange);
+    border-color: var(--vc-orange);
+  }
+
+  /* Sous-item actif de la sidebar (orange) */
+  .subnav-active {
+    background: var(--vc-orange);
+    color: white;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+
+  /* ---------- Header : style conforme à la navbar / maquette ---------- */
+  .header-bg {
+    /* couleur cohérente, léger dégradé pour profondeur */
+    background: linear-gradient(90deg, var(--vc-purple) 0%, var(--vc-purple-dark) 100%);
+    color: var(--vc-white);
+    /* arrondi en haut à droite pour s'aligner visuellement avec la carte principale */
+    border-top-right-radius: 12px;
+    /* légère ombre interne comme sur la maquette */
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06);
+  }
+
+  /* titre centré plus volumineux */
+  .header-bg > h2,
+  .header-bg .text-3xl {
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+
+  /* responsive : diminuer la taille sur petits écrans */
+  @media (max-width: 640px) {
+    .header-bg > h2 {
+      font-size: 1.25rem; /* mobile */
+    }
+  }
+
+  /* Pill "connexion stable" */
+  .header-bg .status-pill,
+  .header-status-pill {
+    @apply px-3 py-1 rounded-full bg-green-100 text-green-800 font-medium flex items-center gap-2;
+    box-shadow: 0 2px 6px rgba(11,22,39,0.06);
+  }
+
+  /* Icône / logo alignés et discrètement mis en valeur */
+  .header-bg img {
+    border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    padding: 2px;
+  }
+
+  /* Placeholder left (pour garder le titre centré visuellement quand sidebar est présente) */
+  .header-bg .left-placeholder,
+  .w-16 { /* réutiliser si tu utilises w-16 dans le JSX */
+    min-width: 64px;
+  }
+
+  /* Header collant et alignement avec la sidebar */
+  .header-bg {
+    position: sticky;
+    top: 0;
+    z-index: 40; /* au-dessus du contenu, sous la sidebar si besoin */
+    height: 72px;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(90deg, var(--vc-purple) 0%, var(--vc-purple-dark) 100%);
+    color: var(--vc-white);
+    border-top-right-radius: 12px;
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06);
+  }
+
+  /* Si le header doit chevaucher le contenu sur de petits écrans, garder main visible */
+  main { /* règle générique pour s'assurer que main n'ajoute pas d'espace au-dessus */
+    scroll-margin-top: 80px;
+  }
+
+  /* petites améliorations d'accessibilité visuelle */
+  .header-bg h2 { color: var(--vc-white); text-shadow: 0 1px 0 rgba(0,0,0,0.12); }
+}
+
+/* Utilities personnalisées */
+@layer utilities {
+  .grid-cols-alerts { 
+    grid-template-columns: 1.2fr 1fr 0.8fr 0.6fr 1fr 2fr 1fr 0.6fr 0.6fr;
+  }
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .filter-card { @apply gap-3 px-3 py-2; }
+  .search-input { @apply px-3 py-1; }
+  .vc-logo { @apply w-9 h-9; }
+}
+
+/* Suppression des styles problématiques */
+main {
+  transform: none; /* Supprime toute transformation */
+  perspective: none; /* Supprime toute perspective */
+  background: none; /* Assure un fond plat */
+}

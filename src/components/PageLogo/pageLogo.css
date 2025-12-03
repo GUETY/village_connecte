@@ -1,0 +1,12 @@
+.vc-page-logo {
+  position: fixed; /* reste visible lors du scroll */
+  top: 80px; /* poussé un peu plus bas pour alignement */
+  right: 8px; /* déplacé un peu plus à droite */
+  z-index: 80; /* au-dessus du header */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  border: 2px solid rgba(255,255,255,0.15);
+}
+
+@media (max-width: 768px) {
+  .vc-page-logo { display: none; }
+}
