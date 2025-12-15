@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Navbar from "../components/navbar.jsx";
 import "../styles/tailwind.css";
-import VoisinageLogo from "../layout/voisinage.jsx";
 import { alertesAPI } from "../services/api.js";
 
 // map backend status -> frontend etat
@@ -126,8 +125,6 @@ export default function App() {
 
   return (
     <Navbar>
-      <VoisinageLogo />
-      
       <main className="max-w-7xl mx-auto px-6 py-8" style={{ transform: "none", perspective: "none" }}>
         {/* Contenu sans fond blanc (transparent) */}
         <div className="space-y-6">

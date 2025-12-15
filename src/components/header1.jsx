@@ -20,27 +20,25 @@ export default function Header({ sidebarOpen }) {
   // priorité : correspondance exacte, sinon détection par mots-clés
   let displayTitle = routeTitleMap[path] || "Villages connectés — Tableau de bord de l’administrateur";
 
-  // Cas spécial : page Gestion des accès utilisateurs
-  if (
-    path.includes("acces") ||
-    path.includes("acces-utilisateurs") ||
-    path.includes("gestion-des-acces")
-  ) {
-    displayTitle = "Gestion des accès utilisateurs";
+  // Cas spécial : page Gestion des accès utilisateurs (détection insensible à la casse)
+  const lcPath = String(path || "").toLowerCase();
+  if (lcPath.includes("users") || lcPath.includes("acces") || lcPath.includes("gestion-des-acces") || lcPath.includes("gestion-des-acces-utilisateurs") || lcPath.includes("acces-utilisateurs") || lcPath.includes("utilisateurs")) {
+    displayTitle = "Gestion des Accès Utilisateurs";
   }
 
   // Cas spécial : création de groupe et login
-  if (path.includes("groupe-login") || path.includes("Creation-groupe-login")) {
+  if (lcPath.includes("groupe-login") || lcPath.includes("creation-groupe-login")) {
     displayTitle = "Création de Groupe et de Login";
   }
 
   // Cas spécial : page Alertes
-  if (path.toLowerCase().includes("alerte") || path.toLowerCase().includes("alertes")) {
+  if (lcPath.includes("alerte") || lcPath.includes("alertes")) {
     displayTitle = "Gestion des Alertes";
   }
 
   // autres détections utiles (exemples)
-  if (path.includes("Users") && !path.includes("bornes")) {
+  // legacy catch-all: if path includes 'users' (case-insensitive) set title
+  if (lcPath.includes("users") && !lcPath.includes("bornes")) {
     displayTitle = "Gestion des Accès Utilisateurs";
   }
   
