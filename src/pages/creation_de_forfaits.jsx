@@ -298,9 +298,9 @@ function ForfaitForm({ onAddForfait, categories, editingIndex, editingData, onCa
 
   // Remplacez l'ancien mapping par un mapping avec les valeurs attendues par le backend
   const uniteDureeLabels = {
-    minutes: "min",
+    minutes: "minute",
     hours: "heure",
-    days: "jours",
+    days: "jour",
   };
 
   return (
@@ -419,7 +419,7 @@ function ForfaitForm({ onAddForfait, categories, editingIndex, editingData, onCa
                     onChange={(e) => handleInputChange("durationUnit", e.target.value)}
                     className="w-4 h-4 accent-[#ff7a00]"
                   />
-                  <span className="text-xs md:text-sm font-medium text-gray-700">{label}</span>
+                  <span className="text-sm">{label}</span>
                 </label>
               ))}
             </div>

@@ -6,7 +6,7 @@ import { agentsAPI, setAuthToken } from "../services/api.js";
 import { compressImageToLimit, isImageFile } from "../utils/imageUtils.js";
 
 /**
- * Page : Gestions des agents
+ * Page : Gestion des agents
  * - Création d'agents via formulaire
  * - Photo, Nom, Prénom, Identifiant, Mot de passe, Contact, Type de pièce, N° de pièce, Région
  * - Option : générer mot de passe à la première connexion
@@ -1059,7 +1059,7 @@ function AgentTable({ agents, onEdit, onDelete }) {
   );
 }
 
-export default function GestionsDesAgents() {
+export default function GestionDesAgents() {
   const regions = [
     { id: 1, nom: "Bouna" },
     { id: 2, nom: "Yamoussoukro" },
@@ -1094,7 +1094,7 @@ export default function GestionsDesAgents() {
 
   // Ajout d'un agent : envoi à l'API puis ajout à l'état
   const handleAddAgent = (createdAgent) => {
-    // crééAgent doit correspondre au schéma (lastName, firstName, login, ...)
+    // L'agent créé doit correspondre au schéma (lastName, firstName, login, ...)
     setAgents((prev) => [...prev, createdAgent]);
     setShowSuccessMessage(true);
     setTimeout(() => setShowSuccessMessage(false), 4000);
