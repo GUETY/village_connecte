@@ -4,7 +4,7 @@ import Navbar from "../components/navbar";
 import { codesAPI, setAuthToken, forfaitAPI, agentsAPI } from "../services/api.js";
 
 /**
- * Page : Générer code de connexions
+ * Page : Générer des codes de connexion
  * - Sélection de catégorie forfait et forfait
  * - Génération de codes de connexion (objets conformes au schéma Code)
  * - Tableau récapitulatif des codes générés
@@ -599,7 +599,7 @@ export default function GenererCodeDeConnexions() {
       <main className="max-w-7xl mx-auto px-2 sm:px-3 md:px-4 py-3 md:py-4 font-sans antialiased text-gray-800" style={{ transform: "none" }}>
         <section style={{ transform: "none" }}>
           <header className="mb-4 pb-3 border-b border-gray-200">
-            <h1 className="text-lg md:text-2xl font-bold text-[var(--vc-purple)] mb-0.5">Générer codes de connexion</h1>
+            <h1 className="text-lg md:text-2xl font-bold text-[var(--vc-purple)] mb-0.5">Générer des codes de connexion</h1>
             <p className="text-xs md:text-sm text-gray-600">Créez rapidement des codes d'accès</p>
           </header>
 

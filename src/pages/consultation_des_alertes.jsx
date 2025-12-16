@@ -164,23 +164,23 @@ export default function App() {
                   <span className="text-sm">En cours</span>
                 </button>
 
-                {/* Bouton Echec */}
+                {/* Bouton Échec */}
                 <button
                   className="filter-option"
                   onClick={() => setEtatFilter(etatFilter === "echec" ? "all" : "echec")}
                   aria-pressed={etatFilter === "echec"}
-                  title="Filtrer par état Echec"
+                  title="Filtrer par état Échec"
                 >
                   <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <span className="text-sm">Echec</span>
+                  <span className="text-sm">Échec</span>
                 </button>
 
                 {/* Indicateur visible du filtre sélectionné */}
                 <div className="ml-3 text-sm font-semibold text-[#ff7a00] select-none" aria-live="polite">
                   Filtre :{" "}
-                  {etatFilter === "all" ? "Tous" : etatFilter === "bon" ? "Bon" : etatFilter === "encours" ? "En cours" : "Echec"}
+                  {etatFilter === "all" ? "Tous" : etatFilter === "bon" ? "Bon" : etatFilter === "encours" ? "En cours" : "Échec"}
                 </div>
               </div>
             </div>
@@ -228,14 +228,14 @@ export default function App() {
               <thead className="bg-[#ff7a00] text-white sticky top-0 z-10">
                 <tr style={{ transform: "none" }}>
                   <th className="px-3 py-3 text-left text-xs sm:text-sm font-semibold whitespace-nowrap">Date émission</th>
-                  <th className="px-3 py-3 text-left text-xs sm:text-sm font-semibold whitespace-nowrap">Emetteur</th>
+                  <th className="px-3 py-3 text-left text-xs sm:text-sm font-semibold whitespace-nowrap">Émetteur</th>
                   <th className="px-3 py-3 text-left text-xs sm:text-sm font-semibold whitespace-nowrap">Type</th>
                   <th className="px-3 py-3 text-left text-xs sm:text-sm font-semibold whitespace-nowrap">Code</th>
                   <th className="px-3 py-3 text-left text-xs sm:text-sm font-semibold whitespace-nowrap">Identifiant</th>
                   <th className="px-3 py-3 text-left text-xs sm:text-sm font-semibold min-w-48">Alertes</th>
                   <th className="px-3 py-3 text-left text-xs sm:text-sm font-semibold whitespace-nowrap">Date constat</th>
                   <th className="px-3 py-3 text-center text-xs sm:text-sm font-semibold whitespace-nowrap">Traité</th>
-                  <th className="px-3 py-3 text-center text-xs sm:text-sm font-semibold whitespace-nowrap">Etat</th>
+                  <th className="px-3 py-3 text-center text-xs sm:text-sm font-semibold whitespace-nowrap">État</th>
                 </tr>
               </thead>
 
@@ -302,8 +302,8 @@ export default function App() {
                           <button
                             className={`etat-badge etat-echec text-xs sm:text-sm ${a.etat === "echec" ? "active" : ""}`}
                             onClick={() => setEtat(a.id, "echec")}
-                            title="Marquer comme Echec"
-                            aria-label={`Marquer alerte ${a.id} comme Echec`}
+                            title="Marquer comme Échec"
+                            aria-label={`Marquer alerte ${a.id} comme Échec`}
                           >
                             ✕
                           </button>
