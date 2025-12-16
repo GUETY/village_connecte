@@ -1,10 +1,12 @@
 import React from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 /* Header séparé — titre calculé depuis la route */
 export default function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
   const path = location.pathname || "/";
+  const [showLogoutMenu, setShowLogoutMenu] = React.useState(false);
 
   const routeTitleMap = {
     "/": "Consultation des alertes",
@@ -27,6 +29,17 @@ export default function Header() {
     displayTitle = "Consultation des alertes";
   }
 
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      navigate("/login");
+      setShowLogoutMenu(false);
+    } catch (err) {
+      console.error("Erreur lors de la déconnexion:", err);
+    }
+  };
+
   return (
     <header
       className="header-bg text-white py-5 px-6 flex items-center justify-between"
@@ -37,6 +50,36 @@ export default function Header() {
 
       <h2 className="text-center text-3xl font-bold flex-1">{displayTitle}</h2>
 
+      {/* Flèche + menu déconnexion */}
+      <div className="relative">
+        <button
+          onClick={() => setShowLogoutMenu(!showLogoutMenu)}
+          className="text-white/80 hover:text-white text-[1.3rem] transition-colors cursor-pointer p-1 rounded hover:bg-white/10"
+          title="Déconnexion"
+          aria-label="Menu déconnexion"
+          aria-expanded={showLogoutMenu}
+        >
+          &gt;
+        </button>
+
+        {showLogoutMenu && (
+          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+            <button
+              onClick={handleLogout}
+              className="w-full text-left px-4 py-2 text-gray-800 hover:bg-red-50 hover:text-red-600 font-semibold transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9l-1.293 1.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Déconnexion
+            </button>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
