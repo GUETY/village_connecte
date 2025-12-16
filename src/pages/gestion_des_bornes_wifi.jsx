@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/navbar";
-import VoisinageLogo from "../layout/voisinage.jsx";
 import { bornesAPI } from "../services/api.js"; // <-- ajouté
 
 /**
@@ -656,9 +655,6 @@ export default function GestionDesBornesWifi() {
         <section className="rounded-lg p-6">
           <header className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 flex items-center justify-center">
-                <VoisinageLogo />
-              </div>
               <h1 className="text-2xl font-bold text-[var(--vc-purple)]">Village: Yaou</h1>
             </div>
           </header>

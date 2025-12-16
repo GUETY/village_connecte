@@ -54,9 +54,56 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    console.error("[api] response error", err?.response || err);
-    return Promise.reject(err?.response || err);
+  async (err) => {
+    const response = err?.response || err;
+    console.error("[api] response error", response);
+
+    try {
+      const status = response?.status;
+      const originalRequest = err?.config;
+
+      // If unauthorized, try to refresh the token once, then retry the request
+      if ((status === 401 || status === 403) && originalRequest && !originalRequest._retry) {
+        originalRequest._retry = true;
+        try {
+          // Attempt refresh token endpoint
+          const refreshRes = await api.post('/auth/refresh');
+          const refreshData = refreshRes?.data ?? refreshRes ?? null;
+
+          // Extract token from response in multiple possible shapes
+          const newToken = refreshData?.token || refreshData?.access_token || refreshData?.data?.token || refreshData?.data?.access_token || null;
+
+          if (newToken) {
+            // Apply new token and retry original request
+            setAuthToken(newToken);
+            // ensure Authorization header on the original request
+            originalRequest.headers = originalRequest.headers || {};
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return api(originalRequest);
+          }
+        } catch (refreshErr) {
+          console.warn('[api] token refresh failed', refreshErr);
+          // fallthrough to logout/redirect
+        }
+      }
+
+      // If we get here, no refresh possible or already retried — clear auth and redirect
+      if (status === 401 || status === 403) {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem('village_token');
+            localStorage.removeItem('token');
+            localStorage.removeItem('userLogin');
+          }
+        } catch (e) {}
+        try { delete api.defaults.headers.common['Authorization']; } catch (e) {}
+        if (typeof window !== 'undefined') window.location.href = '/';
+      }
+    } catch (e) {
+      console.error('[api] response interceptor error', e);
+    }
+
+    return Promise.reject(response);
   }
 );
 
@@ -70,6 +117,15 @@ export const agentsAPI = {
     api.post("/agents", formData).then(r => r.data),
   update: (id, payload) => api.put(`/agents/${id}`, payload).then(r => r.data),
   remove: (id) => api.delete(`/agents/${id}`).then(r => r.data),
+};
+
+// --- Nouvel export : API Users (liste des utilisateurs connectés) ---
+export const usersAPI = {
+  list: (params) => api.get("/users", { params }).then(r => r.data),
+  get: (id) => api.get(`/users/${id}`).then(r => r.data),
+  create: (payload) => api.post("/users", payload).then(r => r.data),
+  update: (id, payload) => api.put(`/users/${id}`, payload).then(r => r.data),
+  remove: (id) => api.delete(`/users/${id}`).then(r => r.data),
 };
 
 export const forfaitAPI = {
@@ -171,6 +227,21 @@ export const bornesAPI = {
   create: (payload) => api.post("/bornes", payload).then(r => r.data),
   update: (id, payload) => api.put(`/bornes/${id}`, payload).then(r => r.data),
   remove: (id) => api.delete(`/bornes/${id}`).then(r => r.data),
+};
+
+// À ajouter dans src/services/api.js
+export const accessRulesAPI = {
+  list: (params) => api.get("/access-rules", { params }).then(r => r.data),
+  save: (payload) => api.post("/access-rules", payload).then(r => r.data),
+};
+
+// --- Nouvel export : API Groupes ---
+export const groupsAPI = {
+  list: (params) => api.get("/groups", { params }).then(r => r.data),
+  get: (id) => api.get(`/groups/${id}`).then(r => r.data),
+  create: (payload) => api.post("/groups", payload).then(r => r.data),
+  update: (id, payload) => api.put(`/groups/${id}`, payload).then(r => r.data),
+  remove: (id) => api.delete(`/groups/${id}`).then(r => r.data),
 };
 
 export default api;

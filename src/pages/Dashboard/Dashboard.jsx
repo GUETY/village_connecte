@@ -4,10 +4,7 @@ import { Users, BarChart3, Wifi, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import Navbar1 from "../../components/navbar1.jsx";
-import { getUsersRequest } from "../../services/users.api";
-import { getAlertesRequest } from "../../services/alertes.api";
-import { getBornesRequest } from "../../services/bornes.api";
-import { getTransactionsRequest } from "../../services/transactions.api";
+import { usersAPI, alertesAPI, bornesAPI, transactionsAPI } from "../../services/api";
 
 function Card({ color = "purple", icon, children, onClick }) {
   const bgMap = {
@@ -182,6 +179,53 @@ export default function Accueil() {
   // protection si le provider n'encapsule pas l'app (évite le crash)
   const auth = useAuth() || {};
   const { users, user } = auth;
+  // support both keys: token may be stored as 'village_token' (api helper) or 'token'
+  const token = auth?.token || localStorage.getItem("village_token") || localStorage.getItem("token") || null;
+
+  // decode JWT payload safely (return object or null)
+  const decodeJwtPayload = (t) => {
+    if (!t) return null;
+    try {
+      const parts = t.split('.');
+      if (parts.length < 2) return null;
+      let payload = parts[1];
+      // base64url -> base64
+      payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+      // pad
+      while (payload.length % 4 !== 0) payload += '=';
+      const decoded = atob(payload);
+      try {
+        return JSON.parse(decoded);
+      } catch (e) {
+        try {
+          // try decode utf8
+          return JSON.parse(decodeURIComponent(escape(decoded)));
+        } catch (e2) {
+          return null;
+        }
+      }
+    } catch (err) {
+      console.warn('decodeJwtPayload error', err);
+      return null;
+    }
+  };
+
+  const tokenPayload = decodeJwtPayload(token);
+
+  // Extraire le nom à afficher depuis plusieurs emplacements possibles du token
+  const extractedName = tokenPayload && (
+    tokenPayload.login || tokenPayload.name || tokenPayload.sub || tokenPayload.email || (tokenPayload.user && (tokenPayload.user.login || tokenPayload.user.name))
+  );
+
+  const displayName = (user && (user.login || user.name)) || extractedName || localStorage.getItem('userLogin') || 'Utilisateur';
+
+  // Si on a extrait un nom depuis le token, le sauvegarder en localStorage pour persistance
+  useEffect(() => {
+    if (extractedName) {
+      try { localStorage.setItem('userLogin', String(extractedName)); } catch (e) { /* ignore */ }
+    }
+  }, [extractedName]);
+
   // si besoin d'accès direct au token: const token = auth?.token || localStorage.getItem('token');
 
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -242,13 +286,11 @@ export default function Accueil() {
     (async () => {
       try {
         setLoadingUsers(true);
-        const res = await getUsersRequest();
-        const list = res?.data?.data || res?.data || [];
+        const res = await usersAPI.list();
+        const list = Array.isArray(res) ? res : res?.data || [];
         if (!mounted) return;
 
-        // If API returns an array, use it; otherwise fallback
         if (Array.isArray(list) && list.length > 0) {
-          // Map server users to table-friendly shape and ensure strings
           const mapped = list.map((u, i) => ({
             id: u._id || u.id || `u-${i}`,
             name: toText(u.login || u.name || u._id),
@@ -258,10 +300,11 @@ export default function Accueil() {
           }));
           setTableUsers(mapped);
         }
+
         // load bornes to compute status counts
         try {
-          const bRes = await getBornesRequest();
-          const bornes = bRes?.data || [];
+          const bRes = await bornesAPI.list();
+          const bornes = Array.isArray(bRes) ? bRes : bRes?.data || [];
           if (Array.isArray(bornes)) {
             const total = bornes.length;
             const active = bornes.filter((b) => String(b.status) === "EN_SERVICE").length;
@@ -279,8 +322,8 @@ export default function Accueil() {
 
         // load alertes to compute counts
         try {
-          const aRes = await getAlertesRequest();
-          const alertes = aRes?.data || [];
+          const aRes = await alertesAPI.list();
+          const alertes = Array.isArray(aRes) ? aRes : aRes?.data || [];
           if (Array.isArray(alertes)) {
             const active = alertes.filter((a) => String(a.status) !== "RESOLUE").length;
             const toTreat = alertes.filter((a) => String(a.status) === "NOUVELLE").length;
@@ -298,6 +341,7 @@ export default function Accueil() {
         setLoadingUsers(false);
       }
     })();
+
     // fetch transactions for today and build per-hour series
     (async () => {
       try {
@@ -308,8 +352,8 @@ export default function Accueil() {
         const to = new Date(now);
         to.setHours(23,59,59,999);
 
-        const res = await getTransactionsRequest({ from: from.toISOString(), to: to.toISOString() });
-        const items = res?.data || [];
+        const res = await transactionsAPI.list({ from: from.toISOString(), to: to.toISOString() });
+        const items = Array.isArray(res) ? res : res?.data || [];
 
         // aggregate distinct users per hour
         const hours = Array.from({ length: 24 }, (_, i) => ({ t: `${String(i).padStart(2,'0')}:00`, v: 0 }));
@@ -329,6 +373,7 @@ export default function Accueil() {
         setLoadingSeries(false);
       }
     })();
+
     return () => {
       mounted = false;
     };
@@ -448,7 +493,7 @@ export default function Accueil() {
             <div className="rounded-xl shadow-md p-4 sm:p-6 mb-6 w-full bg-gradient-to-r from-[#7B1FFF] to-[#A84BFF] border border-white/10 transition-all duration-300">
               <div className="flex flex-col items-start gap-2 sm:gap-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight">
-                  {`Bienvenue, ${user?.login || "Utilisateur"}`}
+                  {`Bienvenue, ${displayName}`}
                 </h2>
                 <p className="text-lg sm:text-2xl font-semibold text-white/85">
                   Connexion stable — Système opérationnel
@@ -471,37 +516,33 @@ export default function Accueil() {
             {/* --- LES 4 CARDS --- */}
             <div className="mt-6 bg-white rounded-lg shadow-sm p-4 sm:p-6 transition-all duration-300">
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6">
-                <Card color="purple" icon={<Users size={24} />} onClick={() => navigate("/utilisateurs-connectes")}>
+                <Card color="purple" icon={<Users size={24} />}>
                   <div className="text-base sm:text-lg font-medium text-gray-700">Utilisateurs Connectés</div>
                   <div className="text-xl sm:text-2xl font-bold text-gray-800">{loadingUsers ? "..." : tableUsers.length}</div>
                   <div className={`text-sm sm:text-lg font-medium ${usersDeltaColor}`}>{usersDeltaLabel}</div>
                 </Card>
 
-                <Card color="blue" icon={<BarChart3 size={24} />} onClick={() => navigate("/historique-journalier")}>
+                <Card color="blue" icon={<BarChart3 size={24} />}>
                   <div className="text-base sm:text-lg font-medium text-gray-700">Historique journalier</div>
                   <div className="text-xl sm:text-2xl font-bold text-blue-700">{totalTrafficStr}</div>
                   <div className="text-xs sm:text-sm text-gray-500">Volume total de données consommées aujourd'hui</div>
                 </Card>
 
-                <Card color="green" icon={<Wifi size={24} />} onClick={() => navigate("/bornes-actives")}>
+                <Card color="green" icon={<Wifi size={24} />}>
                   <div className="text-base sm:text-lg font-medium text-gray-700">Bornes Actives</div>
                   <div className="text-xl sm:text-2xl font-bold text-green-700">{bornesActive}/{bornesTotal}</div>
                   <div className="text-xs sm:text-sm text-orange-500">{bornesAlert}</div>
                 </Card>
 
-                <Card color="orange" icon={<AlertCircle size={24} />} onClick={() => navigate("/alertes-actives")}>
+                <Card color="orange" icon={<AlertCircle size={24} />}>
                   <div className="text-base sm:text-lg font-medium text-gray-700">Alertes Actives</div>
                   <div className="text-xl sm:text-2xl font-bold text-gray-800">{activeAlertsCount}</div>
                   <div className="text-xs sm:text-sm text-orange-600">{toTreatCount} à traiter</div>
                 </Card>
               </section>
-
               {/* --- GRAPH + TABLEAU --- */}
               <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                <div
-                  onClick={() => navigate("/historique-connexions")}
-                  className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-purple-50 cursor-pointer hover:shadow-lg transition-shadow duration-200 overflow-x-auto"
-                >
+                <div className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-purple-50 hover:shadow-lg transition-shadow duration-200 overflow-x-auto">
                   <h3 className="text-purple-700 font-semibold mb-4 text-base sm:text-lg">
                     Historique Journalier des Connexions
                   </h3>
@@ -511,11 +552,8 @@ export default function Accueil() {
                   </div>
                 </div>
 
-                {/* Tableau Users */}
-                <div
-                  onClick={() => navigate("/gestion-acces-utilisateurs")}
-                  className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-white cursor-pointer hover:shadow-lg transition-shadow duration-200"
-                >
+                {/* Tableau Users*/}
+                <div className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-white transition-shadow duration-200">
                   <h3 className="text-purple-700 font-semibold mb-4 text-base sm:text-lg">
                     Gestion des Accès - Utilisateurs Connectés
                   </h3>
@@ -532,8 +570,8 @@ export default function Accueil() {
                       </thead>
 
                       <tbody>
-                        {tableUsers.map((u) => (
-                          <tr key={u.name} className="border-b border-purple-200 last:border-b-0 hover:bg-purple-50">
+                        {tableUsers.map((u, idx) => (
+                          <tr key={u.id || u.name || `user-${idx}`} className="border-b border-purple-200 last:border-b-0 hover:bg-purple-50">
                             <td className="px-2 sm:px-3 py-2 truncate">{u.name}</td>
                             <td className="px-2 sm:px-3 py-2 truncate">{u.ip}</td>
                             <td className="px-2 sm:px-3 py-2 truncate">{u.traffic}</td>

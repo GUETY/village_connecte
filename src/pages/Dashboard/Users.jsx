@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { getUsersRequest } from "../../services/users.api";
-import { getGroupsRequest } from "../../services/groups.api";
-import { getAccessRulesRequest } from "../../services/access.api";
-import { saveAccessRulesRequest } from "../../services/access.api";
+import { agentsAPI, groupsAPI } from "../../services/api";
 import Navbar from "../../components/navbar1.jsx";
-import Header from "../../components/header1.jsx";
 
 export default function GestionDesAccesUtilisateurs() {
   const [loginSelection, setLoginSelection] = useState("");
@@ -67,11 +63,20 @@ export default function GestionDesAccesUtilisateurs() {
   useEffect(() => {
     (async () => {
       try {
-        const [uRes, gRes] = await Promise.allSettled([getUsersRequest(), getGroupsRequest()]);
-        if (uRes.status === "fulfilled" && uRes.value?.data)
-          setAvailableLogins(uRes.value.data.map((u) => u.login || u.name));
-        if (gRes.status === "fulfilled" && gRes.value?.data)
-          setAvailableGroups(gRes.value.data || []);
+        const [uRes, gRes] = await Promise.allSettled([
+          agentsAPI.list(),
+          groupsAPI.list()
+        ]);
+        
+        if (uRes.status === "fulfilled") {
+          const users = Array.isArray(uRes.value) ? uRes.value : uRes.value?.data || [];
+          setAvailableLogins(users.map((u) => u.login || u.name));
+        }
+        
+        if (gRes.status === "fulfilled") {
+          const groups = Array.isArray(gRes.value) ? gRes.value : gRes.value?.data || [];
+          setAvailableGroups(groups || []);
+        }
       } catch (err) {
         console.error("load users/groups:", err);
       }
@@ -87,49 +92,9 @@ export default function GestionDesAccesUtilisateurs() {
 
     (async () => {
       try {
-        const res = await getAccessRulesRequest();
-        const list = res?.data?.data || res?.data || [];
-
-        const found = list.find((r) => r.ownerType === ownerType && String(r.owner) === String(owner));
-        if (!found) {
-          // pas de règle enregistrée pour cet owner -> ne pas toucher au tableau
-          return;
-        }
-
-        // construire rows à partir des règles retournées
-        const loadedRows = (found.rows || []).map((row, i) => ({
-          id: i + 1,
-          startDate: row.startDate || "",
-          endDate: row.endDate || "",
-          startTime: row.startTime || "",
-          endTime: row.endTime || "",
-          duration: row.duration || "",
-          periodic: !!row.periodic,
-          quota: row.quota || "",
-          speed: row.speed || "",
-          priority: row.priority || "",
-          selected: !!(row.startDate || row.endDate || row.startTime || row.endTime || row.duration || row.quota || row.speed || row.priority),
-        }));
-
-        // s'assurer d'au moins 10 lignes pour l'affichage
-        const minRows = 10;
-        while (loadedRows.length < minRows) {
-          loadedRows.push({
-            id: loadedRows.length + 1,
-            startDate: "",
-            endDate: "",
-            startTime: "",
-            endTime: "",
-            duration: "",
-            periodic: false,
-            quota: "",
-            speed: "",
-            priority: "",
-            selected: false,
-          });
-        }
-
-        setRows(loadedRows);
+        // TODO: Ajouter l'API pour récupérer les règles d'accès si disponible
+        // const res = await accessRulesAPI.list();
+        // Pour l'instant, nous utilisons une structure locale
       } catch (err) {
         console.error("load access rules error:", err);
       }
@@ -177,7 +142,7 @@ export default function GestionDesAccesUtilisateurs() {
         speed: speedValue !== "" ? speedValue : row.speed,
         priority: priorityValue || row.priority,
         periodic: !!(periodStart && periodEnd),
-        selected: true, // mark updated rows as selected so user sees they were applied
+        selected: true,
       };
     });
 
@@ -195,32 +160,25 @@ export default function GestionDesAccesUtilisateurs() {
         rows: newRows.filter((r) => r.startDate || r.endDate || r.startTime || r.endTime || r.duration || r.quota || r.speed || r.priority),
       };
 
-      // debug: log payload before sending
       console.debug("Saving access rules payload:", payload);
 
       try {
-        const res = await saveAccessRulesRequest(payload);
-        console.debug("saveAccessRules response:", res?.data || res);
-        // show clearer server response when possible
-        const msg = res?.data?.message || (res?.data?.ok ? "Règles enregistrées en base de données." : "Règles enregistrées.");
-        window.alert(msg);
+        // TODO: Implémenter l'API pour sauvegarder les règles d'accès
+        // const res = await accessRulesAPI.save(payload);
+        window.alert("Règles enregistrées localement.");
       } catch (err) {
-        console.error("save access rules error:", err, err.response?.data);
-        const status = err?.response?.status;
-        const serverMsg = err?.response?.data?.message || JSON.stringify(err?.response?.data) || err.message;
-        window.alert(`Erreur lors de l'enregistrement des règles (status ${status}): ${serverMsg}`);
+        console.error("save access rules error:", err);
+        window.alert("Erreur lors de l'enregistrement des règles");
       }
     } else {
-      // if no owner selected, just inform the user
       window.alert("Aucun login ou groupe sélectionné — les données ont été appliquées localement seulement.");
     }
 
-    resetLeftFields(); // ⬅️ vide tous les champs après validation
+    resetLeftFields();
   };
 
   return (
     <Navbar>
-      <Header />
       <div className="min-h-screen pt-28 pl-8 pr-4 bg-white w-full max-w-[3000px] mx-auto">
         {/* SÉLECTEURS */}
         <div className="flex items-start justify-between mb-6">

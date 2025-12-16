@@ -26,7 +26,7 @@ export default function Login() {
     e.preventDefault();
     setError(""); // réinitialise le message d'erreur avant tentative
 
-    try {
+    try { 
       let res;
       try {
         // Essaye le endpoint /auth/login
