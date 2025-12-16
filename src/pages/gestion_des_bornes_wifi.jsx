@@ -4,7 +4,7 @@ import { bornesAPI } from "../services/api.js"; // <-- ajouté
 
 /**
  * Page : Gestion des Bornes Wi-Fi
- * Ajustements visuels : tableau net, entête orange pur, suppression du fond blanc interne,
+ * Ajustements visuels : tableau net, en-tête orange pur, suppression du fond blanc interne,
  * police améliorée, boutons responsives propres.
  */
 
@@ -109,7 +109,7 @@ function ConfirmDialog({ title, message, onConfirm, onCancel, confirmLabel = "Ou
   );
 }
 
-/* --- Sliding panel (apparait depuis la droite) --- */
+/* --- Sliding panel (apparaît depuis la droite) --- */
 function SlidePanel({ selected, visible, onClose, requestAccessChange, requestEtatChange, onValidate, onReset, isValidating }) {
   if (!visible || !selected || !selected.name) return null;
   return (
@@ -720,7 +720,7 @@ export default function GestionDesBornesWifi() {
               <input
                 id="search-borne"
                 type="search"
-                placeholder="Recherche : nom, ip, état..."
+                placeholder="Recherche : nom, IP, état..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="px-4 py-2 border-2 border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-300 w-64"

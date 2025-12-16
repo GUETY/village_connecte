@@ -146,7 +146,7 @@ function TransactionTable({ transactions }) {
           <thead className="bg-[#ff7a00] text-white sticky top-0 z-10">
             <tr style={{ transform: "none" }}>
               <th className="px-2 md:px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Date</th>
-              <th className="px-2 md:px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Code Agent</th>
+              <th className="px-2 md:px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Code agent</th>
               <th className="px-2 md:px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Utilisateur</th>
               <th className="px-2 md:px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Durée (min)</th>
               <th className="px-2 md:px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Forfait</th>

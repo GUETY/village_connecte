@@ -56,8 +56,12 @@ export default function Header({ sidebarOpen }) {
     >
       {/* Titre centré */}
       <div
-        className="absolute left-1/2 transform -translate-x-1/2 text-center text-[1.2rem] sm:text-[1.3rem] font-bold whitespace-nowrap max-w-[80%] truncate"
-        style={{ color: "rgba(255,255,255,0.95)" }}
+        className="absolute left-1/2 transform -translate-x-1/2 text-center whitespace-nowrap max-w-[80%] truncate"
+        style={{ 
+          color: "rgba(255,255,255,0.95)",
+          fontSize: "1.5rem",
+          fontWeight: 700
+        }}
       >
         {displayTitle}
       </div>
