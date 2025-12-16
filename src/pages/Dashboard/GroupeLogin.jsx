@@ -74,7 +74,7 @@ export default function CreationDeGroupeEtDeLogin() {
   
   const defaultGroups = [
     "Hopi-Docteur",
-    "Hopi-Sécrétariat",
+    "Hopi-Secrétariat",
     "Hopi-Direction",
     "Hopi-Urgence",
     "Hopi-Sage",
