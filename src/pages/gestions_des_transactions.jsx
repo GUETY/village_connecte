@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Navbar from "../components/navbar";
-import VoisinageLogo from "../layout/voisinage.jsx";
 // Import de l'API transactions et agents
 import { transactionsAPI, agentsAPI, setAuthToken } from "../services/api.js";
 
@@ -443,9 +442,7 @@ export default function GestionsDesTransactions() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6 font-sans antialiased text-gray-800" style={{ transform: "none" }}>
         {/* Header avec logo de voisinage */}
         <header className="flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 flex items-center justify-center">
-            <VoisinageLogo />
-          </div>
+           <h1 className="text-2xl font-bold text-[var(--vc-purple)]">Transactions</h1>
         </header>
 
         <section style={{ transform: "none" }}>

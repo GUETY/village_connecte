@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getAlertesRequest, createAlerteRequest, deleteAlerteRequest } from "../../services/alertes.api";
+import { alertesAPI, bornesAPI } from "../../services/api";
 import Navbar1 from "../../components/navbar1.jsx";
 
 export default function GestionDesAlertes() {
@@ -10,6 +10,13 @@ export default function GestionDesAlertes() {
   const [selectedPredefinedCode, setSelectedPredefinedCode] = useState(null);
   const [autres, setAutres] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [rows, setRows] = useState([]);
+  const [notif, setNotif] = useState({ type: "", message: "" });
+  const [loading, setLoading] = useState({ creating: false, deleting: null });
+  const [bornes, setBornes] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+
   // mapping codeType -> predefined alerts
   // mapping codeType -> predefined alerts with specific codes
   const predefinedMap = {
@@ -34,22 +41,6 @@ export default function GestionDesAlertes() {
       { label: "mise à jour requise", code: 403 },
     ],
   };
-  const [rows, setRows] = useState([
-    {
-      id: 1,
-      dateEmission: "2025-11-10",
-      codeType: "100",
-      code: "101",
-      identifiant: "borne1",
-      alertes: "borne autorisée mais inaccessible",
-      dateConstat: "2025-11-10",
-    },
-  ]);
-  const [notif, setNotif] = useState({ type: "", message: "" });
-  const [loading, setLoading] = useState({ creating: false, deleting: null });
-  const [bornes, setBornes] = useState(["borne1", "borne2"]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [highlightIndex, setHighlightIndex] = useState(-1);
 
   function handleValider() {
     if (!identifiant) {
@@ -70,7 +61,7 @@ export default function GestionDesAlertes() {
           status: "NOUVELLE",
           metadata: { dateConstat: date || null },
         };
-        const res = await createAlerteRequest(payload);
+        const res = await alertesAPI.create(payload);
         const created = res?.data;
         if (created) setRows((r) => [created, ...r]);
         else
@@ -109,17 +100,37 @@ export default function GestionDesAlertes() {
   }, [codeType]);
 
   useEffect(() => {
-    (async () => {
+    const fetchData = async () => {
       try {
-        const res = await getAlertesRequest();
-        const data = res?.data ?? res;
-        if (data?.value) setRows(data.value);
-        else if (Array.isArray(data)) setRows(data);
-        else if (data) setRows([data]);
+        // Récupérer les alertes
+        const alertesData = await alertesAPI.list();
+        if (Array.isArray(alertesData)) {
+          setRows(alertesData);
+        } else if (alertesData?.value && Array.isArray(alertesData.value)) {
+          setRows(alertesData.value);
+        }
       } catch (err) {
         console.error("fetch alertes error:", err);
+        setNotif({ type: "error", message: "Erreur lors du chargement des alertes" });
       }
-    })();
+
+      try {
+        // Récupérer les bornes
+        const bornesData = await bornesAPI.list();
+        if (Array.isArray(bornesData)) {
+          const bornesList = bornesData.map((b) => b.name || b.identifiant || b.id);
+          setBornes(bornesList);
+        } else if (bornesData?.value && Array.isArray(bornesData.value)) {
+          const bornesList = bornesData.value.map((b) => b.name || b.identifiant || b.id);
+          setBornes(bornesList);
+        }
+      } catch (err) {
+        console.error("fetch bornes error:", err);
+        setNotif({ type: "error", message: "Erreur lors du chargement des bornes" });
+      }
+    };
+
+    fetchData();
   }, []);
 
   return (
@@ -354,8 +365,8 @@ export default function GestionDesAlertes() {
                   <div className="truncate">{r.dateEmission || (r.createdAt ? new Date(r.createdAt).toLocaleDateString('fr-CA') : '')}</div>
                   <div className="hidden sm:block">{r.type || r.codeType}</div>
                   <div>{r.code}</div>
-                  <div className="hidden lg:block truncate">{r.emitter || r.identifiant}</div>
-                  <div className="hidden lg:block truncate">{(r.code || r.codeType) ? `${r.code || r.codeType} — ${r.message || r.alertes}` : (r.message || r.alertes)}</div>
+                  <div className="hidden lg:block whitespace-normal break-words">{r.emitter || r.identifiant}</div>
+                  <div className="hidden lg:block whitespace-normal break-words">{(r.code || r.codeType) ? `${r.code || r.codeType} — ${r.message || r.alertes}` : (r.message || r.alertes)}</div>
                   <div className="flex justify-end">
                     <button
                       onClick={async () => {
@@ -364,7 +375,7 @@ export default function GestionDesAlertes() {
                         if (!confirmAction) return;
                         try {
                           setLoading((s) => ({ ...s, deleting: id }));
-                          await deleteAlerteRequest(id);
+                          await alertesAPI.remove(id);
                           setRows((prev) => prev.filter((x) => (x._id || x.id) !== id));
                           setNotif({ type: 'success', message: 'Alerte supprimée.' });
                         } catch (err) {

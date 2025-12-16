@@ -1,8 +1,10 @@
 import React from 'react';
 import './pageLogo.css';
-import defaultLogo from '../../assets/voisinage.jpeg';
 
-export default function PageLogo({ src = defaultLogo, alt = 'Logo', size = 60 }) {
+export default function PageLogo({ src, alt = 'Logo', size = 60 }) {
+  // Si pas de source fournie, ne rien afficher (supprime le logo par défaut)
+  if (!src) return null;
+
   return (
     <div className="vc-page-logo" style={{ width: size, height: size }}>
       <img

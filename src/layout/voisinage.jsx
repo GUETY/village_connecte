@@ -1,5 +1,4 @@
 import React from "react";
-import voisinageImg from "../assets/voisinage.jpeg"; // Import de l'image
 
 /**
  * Composant VoisinageLogo
@@ -12,24 +11,8 @@ import voisinageImg from "../assets/voisinage.jpeg"; // Import de l'image
  * <VoisinageLogo />
  */
 
-export default function VoisinageLogo({ 
-  size = "h-12 w-12", 
-  ariaLabel = "Voisinage"
-}) {
-  return (
-    <div
-      aria-hidden="false"
-      role="img"
-      aria-label={ariaLabel}
-      className="fixed top-20 right-6 z-40 animate-pulse hover:animate-none"
-    >
-      <div className={`bg-transparent shadow-lg transition-all duration-200 hover:scale-110 ${size} overflow-hidden`}>
-        <img
-          src={voisinageImg}
-          alt={ariaLabel}
-          className="block object-contain w-full h-full drop-shadow-lg"
-        />
-      </div>
-    </div>
-  );
+export default function VoisinageLogo() {
+  // Composant conservé pour compatibilité des imports.
+  // Ne rend rien pour supprimer l'affichage du logo "voisinage.jpeg" partout.
+  return null;
 }

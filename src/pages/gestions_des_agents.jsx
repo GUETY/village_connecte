@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Navbar from "../components/navbar";
-import VoisinageLogo from "../layout/voisinage.jsx";
 // Import de l'API axios
 import { agentsAPI, setAuthToken } from "../services/api.js";
 // import utilitaires image (déplacés)
@@ -1159,7 +1158,7 @@ export default function GestionsDesAgents() {
 
   return (
     <Navbar>
-      <VoisinageLogo />
+      
 
       {/* Ajout de padding-top pour éviter que le contenu soit masqué par le header */}
       <main className="max-w-7xl mx-auto px-6 py-8 font-sans antialiased text-gray-800 bg-white rounded-lg shadow-md pt-20">

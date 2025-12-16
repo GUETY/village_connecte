@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Navbar from "../components/navbar";
-import VoisinageLogo from "../layout/voisinage.jsx";
 // import des API (doit exister dans src/services/api.js)
 import { codesAPI, setAuthToken, forfaitAPI, agentsAPI } from "../services/api.js";
 
@@ -595,8 +594,6 @@ export default function GenererCodeDeConnexions() {
 
   return (
     <Navbar>
-      <VoisinageLogo />
-      
       {showSuccess && <SuccessNotification message={successMessage} onClose={() => setShowSuccess(false)} />}
 
       <main className="max-w-7xl mx-auto px-2 sm:px-3 md:px-4 py-3 md:py-4 font-sans antialiased text-gray-800" style={{ transform: "none" }}>

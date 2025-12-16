@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/navbar";
-import VoisinageLogo from "../layout/voisinage.jsx";
 // --- ajout import API ---
 import { forfaitAPI, setAuthToken } from "../services/api.js";
 
@@ -719,7 +718,6 @@ export default function CreationDeForfaits() {
 
   return (
     <Navbar>
-      <VoisinageLogo />
       <main className="max-w-7xl mx-auto px-2 sm:px-3 md:px-4 py-3 md:py-4 font-sans antialiased text-gray-800">
         <section>
           {/* Header */}

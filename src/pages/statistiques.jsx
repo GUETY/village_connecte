@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement } from "chart.js";
 import { Line, Doughnut } from "react-chartjs-2";
 import Navbar from "../components/navbar";
-import VoisinageLogo from "../layout/voisinage.jsx";
 // Import de l'API statistiques
 import { statistiquesAPI, setAuthToken } from "../services/api.js";
 
@@ -591,7 +590,6 @@ export default function Statistiques() {
 
   return (
     <Navbar>
-      <VoisinageLogo />
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6 font-sans antialiased text-gray-800" style={{ transform: "none" }}>
         <section style={{ transform: "none" }}>
           {/* Sélecteur de date */}
