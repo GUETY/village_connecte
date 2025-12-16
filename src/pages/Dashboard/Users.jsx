@@ -267,7 +267,7 @@ export default function GestionDesAccesUtilisateurs() {
                     <span className="h-2 w-2 rounded-full bg-orange-500"></span>
                   </span>
                 </span>
-                chaque jours
+                Chaque jour
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer">
@@ -277,7 +277,7 @@ export default function GestionDesAccesUtilisateurs() {
                     <span className="h-2 w-2 rounded-full bg-orange-500"></span>
                   </span>
                 </span>
-                chaque semaine
+                Chaque semaine
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer">
@@ -287,7 +287,7 @@ export default function GestionDesAccesUtilisateurs() {
                     <span className="h-2 w-2 rounded-full bg-orange-500"></span>
                   </span>
                 </span>
-                chaque mois
+                Chaque mois
               </label>
 
               {/* PÉRIODE */}
@@ -332,7 +332,7 @@ export default function GestionDesAccesUtilisateurs() {
                 </span>
 
                 <div className="flex flex-col">
-                  <span>Définir Horaire (24h) de</span>
+                  <span>Définir horaire (24h) de</span>
                   <div className="flex items-center gap-2 mt-1">
                     <input
                       type="time"
@@ -413,7 +413,7 @@ export default function GestionDesAccesUtilisateurs() {
 
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold flex-1 text-center">
-                LISTES RECAPITULATIVES DES TEMPS ET DUREES D'ACCES
+                LISTE RÉCAPITULATIVE DES TEMPS ET DURÉES D'ACCÈS
               </h3>
 
               <label className="flex items-center gap-2 text-sm">
@@ -423,7 +423,7 @@ export default function GestionDesAccesUtilisateurs() {
                   onChange={toggleSelectAll}
                   className="appearance-none w-4 h-4 border-2 border-orange-500 rounded-sm checked:bg-orange-500 checked:border-orange-500 cursor-pointer"
                 />
-                tout sélectionner
+                Tout sélectionner
               </label>
             </div>
 
