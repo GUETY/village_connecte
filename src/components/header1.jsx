@@ -59,7 +59,7 @@ export default function Header({ sidebarOpen }) {
         className="absolute left-1/2 transform -translate-x-1/2 text-center whitespace-nowrap max-w-[80%] truncate"
         style={{ 
           color: "rgba(255,255,255,0.95)",
-          fontSize: "1.75rem",
+          fontSize: "1.5rem",
           fontWeight: 700
         }}
       >
