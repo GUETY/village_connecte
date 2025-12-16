@@ -13,33 +13,33 @@ export default function Header({ sidebarOpen }) {
 
   // mapping statique + détection robuste par sous-chaîne
   const routeTitleMap = {
-    "/dashboard/alertes": "Gestion des Alertes",
-    "/alertes": "Gestion des Alertes",
+    "/dashboard/alertes": "Gestion des alertes",
+    "/alertes": "Gestion des alertes",
   };
 
   // priorité : correspondance exacte, sinon détection par mots-clés
-  let displayTitle = routeTitleMap[path] || "Villages connectés — Tableau de bord de l’administrateur";
+  let displayTitle = routeTitleMap[path] || "Tableau de bord de l'administrateur";
 
   // Cas spécial : page Gestion des accès utilisateurs (détection insensible à la casse)
   const lcPath = String(path || "").toLowerCase();
   if (lcPath.includes("users") || lcPath.includes("acces") || lcPath.includes("gestion-des-acces") || lcPath.includes("gestion-des-acces-utilisateurs") || lcPath.includes("acces-utilisateurs") || lcPath.includes("utilisateurs")) {
-    displayTitle = "Gestion des Accès Utilisateurs";
+    displayTitle = "Gestion des accès utilisateurs";
   }
 
   // Cas spécial : création de groupe et login
   if (lcPath.includes("groupe-login") || lcPath.includes("creation-groupe-login")) {
-    displayTitle = "Création de Groupe et de Login";
+    displayTitle = "Création de groupe et de login";
   }
 
   // Cas spécial : page Alertes
   if (lcPath.includes("alerte") || lcPath.includes("alertes")) {
-    displayTitle = "Gestion des Alertes";
+    displayTitle = "Gestion des alertes";
   }
 
   // autres détections utiles (exemples)
   // legacy catch-all: if path includes 'users' (case-insensitive) set title
   if (lcPath.includes("users") && !lcPath.includes("bornes")) {
-    displayTitle = "Gestion des Accès Utilisateurs";
+    displayTitle = "Gestion des accès utilisateurs";
   }
   
   return (
@@ -56,7 +56,7 @@ export default function Header({ sidebarOpen }) {
     >
       {/* Titre centré */}
       <div
-        className="absolute left-1/2 transform -translate-x-1/2 text-center text-[1.2rem] sm:text-[1.3rem] font-semibold whitespace-nowrap max-w-[80%] truncate"
+        className="absolute left-1/2 transform -translate-x-1/2 text-center text-[1.2rem] sm:text-[1.3rem] font-bold whitespace-nowrap max-w-[80%] truncate"
         style={{ color: "rgba(255,255,255,0.95)" }}
       >
         {displayTitle}
