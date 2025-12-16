@@ -26,7 +26,7 @@ export default function Header({ sidebarOpen }) {
     displayTitle = "Gestion des accès utilisateurs";
   }
 
-  // Cas spécial : création de groupe et login
+  // Cas spécial : création de groupe et de login
   if (lcPath.includes("groupe-login") || lcPath.includes("creation-groupe-login")) {
     displayTitle = "Création de groupe et de login";
   }

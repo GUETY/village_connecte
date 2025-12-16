@@ -8,21 +8,21 @@ export default function Header() {
 
   const routeTitleMap = {
     "/": "Consultation des alertes",
-    "/consultation-des-alertes": "Consultation des alertes", // <--- ajouté
+    "/consultation-des-alertes": "Consultation des alertes",
     "/gestion-des-bornes-wifi": "Gestion des Bornes Wi‑Fi",
     "/gestion_des_bornes_wifi": "Gestion des Bornes Wi‑Fi",
     "/gestion-des-bornes-acces-utilisateurs": "Gestion des accès utilisateurs",
-    "/gestion-des-bornes-alertes": "Gestions des alertes",
-    "/gestion-des-bornes-consultations": "Consultations des alertes",
+    "/gestion-des-bornes-alertes": "Gestion des alertes",
+    "/gestion-des-bornes-consultations": "Consultation des alertes",
     "/gestion-des-transactions": "Gestion des transactions",
     "/statistiques": "Statistiques",
-    "/gestions-des-agents": "Gestions des agents",
+    "/gestions-des-agents": "Gestion des agents",
     "/creation-de-forfaits": "Création de forfaits",
-    "/generer-code-de-connexions": "Générer code de connexions",
+    "/generer-code-de-connexions": "Générer des codes de connexion",
   };
 
   // priorité : mapping exact, sinon détection par mot-clé "alerte"
-  let displayTitle = routeTitleMap[path] || "Gestions des transactions";
+  let displayTitle = routeTitleMap[path] || "Gestion des transactions";
   if (path.toLowerCase().includes("alerte")) {
     displayTitle = "Consultation des alertes";
   }
