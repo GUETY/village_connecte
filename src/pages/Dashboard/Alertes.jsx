@@ -16,6 +16,10 @@ export default function GestionDesAlertes() {
   const [bornes, setBornes] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
+  // confirmation modal state (remplace window.confirm to avoid native 'localhost' dialog)
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   // mapping codeType -> predefined alerts
   // mapping codeType -> predefined alerts with specific codes
@@ -369,21 +373,10 @@ export default function GestionDesAlertes() {
                   <div className="hidden lg:block whitespace-normal break-words">{(r.code || r.codeType) ? `${r.code || r.codeType} — ${r.message || r.alertes}` : (r.message || r.alertes)}</div>
                   <div className="flex justify-end">
                     <button
-                      onClick={async () => {
-                        const id = r._id || r.id;
-                        const confirmAction = window.confirm('Supprimer cette alerte ?');
-                        if (!confirmAction) return;
-                        try {
-                          setLoading((s) => ({ ...s, deleting: id }));
-                          await alertesAPI.remove(id);
-                          setRows((prev) => prev.filter((x) => (x._id || x.id) !== id));
-                          setNotif({ type: 'success', message: 'Alerte supprimée.' });
-                        } catch (err) {
-                          console.error('delete alerte error:', err);
-                          setNotif({ type: 'error', message: 'Erreur lors de la suppression.' });
-                        } finally {
-                          setLoading((s) => ({ ...s, deleting: null }));
-                        }
+                      onClick={() => {
+                        // open custom confirm modal
+                        setConfirmTarget({ id: r._id || r.id, label: r.message || r.code || r._id });
+                        setConfirmOpen(true);
                       }}
                       className="px-2 py-1 bg-red-600 text-white rounded text-xs whitespace-nowrap"
                     >
@@ -395,9 +388,47 @@ export default function GestionDesAlertes() {
             )}
           </div>
         </div>
+        {/* Toast animé */}
         {notif.message && (
-          <div className={`fixed top-24 right-4 px-3 py-2 rounded text-white text-sm ${notif.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-            {notif.message}
+          <div className="fixed inset-0 pointer-events-none z-50 flex items-start justify-end p-6">
+            <div className={`pointer-events-auto transform transition-all duration-300 ${notif.message ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+              <div className={`${notif.type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white px-4 py-2 rounded shadow-lg text-sm`}>{notif.message}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal (custom) */}
+        {confirmOpen && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-lg w-[90%] max-w-md p-4 transform transition-transform duration-200">
+              <div className="text-lg font-semibold mb-2">Confirmer la suppression</div>
+              <div className="text-sm text-gray-700 mb-4">Voulez-vous vraiment supprimer cette alerte&nbsp;: <strong>{confirmTarget?.label}</strong> ?</div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setConfirmOpen(false)} className="px-3 py-1 rounded bg-gray-200">Annuler</button>
+                <button
+                  onClick={async () => {
+                    if (!confirmTarget) return;
+                    setConfirmLoading(true);
+                    try {
+                      setLoading((s) => ({ ...s, deleting: confirmTarget.id }));
+                      await alertesAPI.remove(confirmTarget.id);
+                      setRows((prev) => prev.filter((x) => (x._id || x.id) !== confirmTarget.id));
+                      setNotif({ type: 'success', message: 'Alerte supprimée.' });
+                    } catch (err) {
+                      console.error('delete alerte error:', err);
+                      setNotif({ type: 'error', message: 'Erreur lors de la suppression.' });
+                    } finally {
+                      setLoading((s) => ({ ...s, deleting: null }));
+                      setConfirmLoading(false);
+                      setConfirmOpen(false);
+                    }
+                  }}
+                  className="px-3 py-1 rounded bg-red-600 text-white"
+                >
+                  {confirmLoading ? '...' : 'Supprimer'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
