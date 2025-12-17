@@ -530,7 +530,7 @@ function AgentForm({ onAddAgent, regions }) {
   }
 
   return (
-    <div className="bg-white rounded-lg p-8 mb-8 border border-gray-200 shadow-sm overflow-hidden" style={{ transform: "none", perspective: "none" }}>
+    <div className="bg-white rounded-lg p-8 mb-8 border border-gray-200 shadow-sm" style={{ transform: "none", perspective: "none" }}>
       <h2 className="text-xl font-bold text-gray-900 mb-6">Créer un nouvel agent</h2>
 
       {errorMessage && (
@@ -560,9 +560,9 @@ function AgentForm({ onAddAgent, regions }) {
           />
         </div>
 
-        {/* -- Le reste des champs utilise handleInputChange avec les alias existants -- */}
-        {/* Exemple Nom */}
+        {/* Grille des champs - SANS OVERFLOW */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" style={{ transform: "none" }}>
+          {/* Nom */}
           <div className="flex flex-col">
             <label className="text-sm font-semibold text-gray-700 mb-2">Nom *</label>
             <input
@@ -966,9 +966,7 @@ function AgentTable({ agents, onEdit, onDelete }) {
 
       {/* Pagination - Stylisée */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 md:p-5 border-t border-gray-200 bg-gray-50" style={{ transform: "none" }}>
-        <div className="text-xs md:text-sm font-semibold text-gray-600">
-          Affichage <span className="text-gray-900">{total === 0 ? 0 : start + 1}–{Math.min(start + paginated.length, total)}</span> sur <span className="text-gray-900">{total}</span>
-        </div>
+        <div />
         <div className="flex items-center gap-2">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -980,7 +978,7 @@ function AgentTable({ agents, onEdit, onDelete }) {
                 : "bg-gradient-to-r from-[#ff7a00] to-[#ff9933] text-white shadow-md hover:shadow-lg hover:scale-105"
             }`}
           >
-            ← Préc
+            Préc
           </button>
 
           <span className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-bold border border-orange-200 whitespace-nowrap">
@@ -997,7 +995,7 @@ function AgentTable({ agents, onEdit, onDelete }) {
                 : "bg-gradient-to-r from-[#ff7a00] to-[#ff9933] text-white shadow-md hover:shadow-lg hover:scale-105"
             }`}
           >
-            Suiv →
+            Suiv
           </button>
         </div>
       </div>
@@ -1158,10 +1156,8 @@ export default function GestionDesAgents() {
 
   return (
     <Navbar>
-      
-
-      {/* Ajout de padding-top pour éviter que le contenu soit masqué par le header */}
-      <main className="max-w-7xl mx-auto px-6 py-8 font-sans antialiased text-gray-800 bg-white rounded-lg shadow-md pt-20">
+      {/* main sans pt-20, le Navbar gère son propre spacing */}
+      <main className="max-w-7xl mx-auto px-6 py-8 font-sans antialiased text-gray-800">
         <section>
           {/* Formulaire de création */}
           <AgentForm onAddAgent={handleAddAgent} regions={regions} />
