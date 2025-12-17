@@ -513,11 +513,11 @@ export default function Accueil() {
               </div>
             </div>
 
-            {/* --- LES 4 CARDS --- */}
+            {/* --- LES 4 CARTES --- */}
             <div className="mt-6 bg-white rounded-lg shadow-sm p-4 sm:p-6 transition-all duration-300">
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6">
                 <Card color="purple" icon={<Users size={24} />}>
-                  <div className="text-base sm:text-lg font-medium text-gray-700">Utilisateurs Connectés</div>
+                  <div className="text-base sm:text-lg font-medium text-gray-700">Utilisateurs connectés</div>
                   <div className="text-xl sm:text-2xl font-bold text-gray-800">{loadingUsers ? "..." : tableUsers.length}</div>
                   <div className={`text-sm sm:text-lg font-medium ${usersDeltaColor}`}>{usersDeltaLabel}</div>
                 </Card>
@@ -529,22 +529,22 @@ export default function Accueil() {
                 </Card>
 
                 <Card color="green" icon={<Wifi size={24} />}>
-                  <div className="text-base sm:text-lg font-medium text-gray-700">Bornes Actives</div>
+                  <div className="text-base sm:text-lg font-medium text-gray-700">Bornes actives</div>
                   <div className="text-xl sm:text-2xl font-bold text-green-700">{bornesActive}/{bornesTotal}</div>
                   <div className="text-xs sm:text-sm text-orange-500">{bornesAlert}</div>
                 </Card>
 
                 <Card color="orange" icon={<AlertCircle size={24} />}>
-                  <div className="text-base sm:text-lg font-medium text-gray-700">Alertes Actives</div>
+                  <div className="text-base sm:text-lg font-medium text-gray-700">Alertes actives</div>
                   <div className="text-xl sm:text-2xl font-bold text-gray-800">{activeAlertsCount}</div>
                   <div className="text-xs sm:text-sm text-orange-600">{toTreatCount} à traiter</div>
                 </Card>
               </section>
-              {/* --- GRAPH + TABLEAU --- */}
+              {/* --- GRAPHIQUE + TABLEAU --- */}
               <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <div className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-purple-50 hover:shadow-lg transition-shadow duration-200 overflow-x-auto">
                   <h3 className="text-purple-700 font-semibold mb-4 text-base sm:text-lg">
-                    Historique Journalier des Connexions
+                    Historique journalier des connexions
                   </h3>
 
                   <div className="w-full h-64 sm:h-72 flex items-center justify-center min-w-full">
@@ -552,20 +552,20 @@ export default function Accueil() {
                   </div>
                 </div>
 
-                {/* Tableau Users*/}
+                {/* Tableau Utilisateurs*/}
                 <div className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-white transition-shadow duration-200">
                   <h3 className="text-purple-700 font-semibold mb-4 text-base sm:text-lg">
-                    Gestion des Accès - Utilisateurs Connectés
+                    Gestion des accès - Utilisateurs connectés
                   </h3>
 
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-xs sm:text-sm">
                       <thead>
                         <tr className="bg-purple-100 text-purple-700 border border-purple-200">
-                          <th className="text-left px-2 sm:px-3 py-2">UTILISATEUR</th>
-                          <th className="text-left px-2 sm:px-3 py-2">ADRESSE IP</th>
-                          <th className="text-left px-2 sm:px-3 py-2">TRAFIC</th>
-                          <th className="text-left px-2 sm:px-3 py-2">GROUPE</th>
+                          <th className="text-left px-2 sm:px-3 py-2">Utilisateur</th>
+                          <th className="text-left px-2 sm:px-3 py-2">Adresse IP</th>
+                          <th className="text-left px-2 sm:px-3 py-2">Trafic</th>
+                          <th className="text-left px-2 sm:px-3 py-2">Groupe</th>
                         </tr>
                       </thead>
 
@@ -615,7 +615,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="p-6 bg-red-50 border border-red-200 rounded">
-          <h2 className="text-red-700 font-semibold">Erreur d'affichage du Dashboard</h2>
+          <h2 className="text-red-700 font-semibold">Erreur d'affichage du dashboard</h2>
           <pre className="text-xs text-red-600 mt-2">{String(this.state.error)}</pre>
           <details className="mt-2 text-xs text-gray-700">
             <summary>Voir la stack</summary>

@@ -21,28 +21,27 @@ export default function GestionDesAlertes() {
   const [confirmTarget, setConfirmTarget] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
 
-  // mapping codeType -> predefined alerts
   // mapping codeType -> predefined alerts with specific codes
   const predefinedMap = {
     "100": [
-      { label: "borne autorisée mais inaccessible", code: 101 },
-      { label: "borne hors service", code: 102 },
-      { label: "interférence détectée", code: 103 },
+      { label: "Borne autorisée mais inaccessible", code: 101 },
+      { label: "Borne hors service", code: 102 },
+      { label: "Interférence détectée", code: 103 },
     ],
     "200": [
-      { label: "tentative connexion non autorisée", code: 201 },
-      { label: "nombre de connexions élevé", code: 202 },
-      { label: "compte bloqué", code: 203 },
+      { label: "Tentative connexion non autorisée", code: 201 },
+      { label: "Nombre de connexions élevé", code: 202 },
+      { label: "Compte bloqué", code: 203 },
     ],
     "300": [
-      { label: "panne matérielle détectée", code: 301 },
-      { label: "capteur défectueux", code: 302 },
-      { label: "redémarrage requis", code: 303 },
+      { label: "Panne matérielle détectée", code: 301 },
+      { label: "Capteur défectueux", code: 302 },
+      { label: "Redémarrage requis", code: 303 },
     ],
     "400": [
-      { label: "erreur application critique", code: 401 },
-      { label: "vulnérabilité détectée", code: 402 },
-      { label: "mise à jour requise", code: 403 },
+      { label: "Erreur application critique", code: 401 },
+      { label: "Vulnérabilité détectée", code: 402 },
+      { label: "Mise à jour requise", code: 403 },
     ],
   };
 
@@ -221,7 +220,7 @@ export default function GestionDesAlertes() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-12 gap-4 md:gap-6 lg:gap-8">
           <div className="col-span-1 md:col-span-3 lg:col-span-3">
-            <div className="mb-2 text-sm font-semibold">Code type & Type Alerte</div>
+            <div className="mb-2 text-sm font-semibold">Code type & Type alerte</div>
 
             <div className="border-2 border-orange-500 rounded-lg p-4 md:p-6">
               <div className="space-y-3 text-sm">
@@ -237,7 +236,7 @@ export default function GestionDesAlertes() {
                     <div className="w-2 h-2 rounded-full bg-transparent peer-checked:bg-white"></div>
                   </div>
                   <span className="font-medium">100</span>
-                  <span className="ml-2">Borne Wi-fi</span>
+                  <span className="ml-2">Borne Wi-Fi</span>
                 </label>
 
                 <label className="flex items-center gap-3 cursor-pointer select-none">

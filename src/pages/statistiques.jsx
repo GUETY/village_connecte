@@ -288,11 +288,11 @@ function StatisticsTable({ data }) {
         </div>
 
         <div className="w-full sm:w-auto">
-          <label htmlFor="search-stats" className="sr-only">Recherche</label>
+          <label htmlFor="search-stats" className="sr-only">Rechercher</label>
           <input
             id="search-stats"
             type="search"
-            placeholder="Recherche..."
+            placeholder="Rechercher..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="px-3 py-1.5 border-2 border-green-300 rounded text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-green-300 w-full sm:w-48"
