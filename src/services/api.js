@@ -24,6 +24,21 @@ const api = axios.create({
   headers: { "Content-Type": "application/json", Accept: "application/json" },
 });
 
+// AJOUT : Récupérer le token CSRF si disponible
+const getCsrfToken = () => {
+  const token = document.querySelector('meta[name="csrf-token"]')?.content;
+  return token || localStorage.getItem("csrf_token") || "";
+};
+
+// Intercepteur pour ajouter le token CSRF
+api.interceptors.request.use((config) => {
+  const csrfToken = getCsrfToken();
+  if (csrfToken) {
+    config.headers["X-CSRF-Token"] = csrfToken;
+  }
+  return config;
+});
+
 // Définit/retire le token d'Authorization pour axios et stocke en localStorage
 export function setAuthToken(token) {
   try {
