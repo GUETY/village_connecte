@@ -115,6 +115,13 @@ function CodeGeneratorForm({ onGenerateCodes }) {
     const qty = Number(formData.nombreCodes || 1);
     const selected = forfaits.find((f) => String(f._id || f.id) === String(formData.forfaitId)) || {};
 
+    // Créer une date actuelle au format YYYY-MM-DD (date locale uniquement, sans heure)
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    const localDateOnly = `${year}-${month}-${day}`;
+
     // construire le payload attendu par /codes/generate
     const payload = {
       category: formData.categorieForfait || selected.category || "default",
@@ -124,7 +131,8 @@ function CodeGeneratorForm({ onGenerateCodes }) {
       durationValue: Number(selected.durationValue || formData.durationValue || 0),
       durationUnit: selected.durationUnit || formData.durationUnit || "days",
       price: Number(selected.price || formData.price || 0),
-      quantity: qty, // demande au backend de générer `qty` codes
+      quantity: qty,
+      date: localDateOnly,
     };
 
     // définir token si présent
@@ -138,12 +146,16 @@ function CodeGeneratorForm({ onGenerateCodes }) {
       // le backend peut renvoyer un tableau de codes ou un objet { codes: [...] }
       const createdCodes = Array.isArray(created) ? created : (created?.codes || (created?.data && Array.isArray(created.data) ? created.data : [created]));
 
-      // Normaliser et notifier l'UI
+      // Normaliser et notifier l'UI - IMPORTANT: ajouter durationUnit depuis le forfait
       const normalized = createdCodes.map((c) => ({
         code: c.code || c.value || c._id || String(c),
         forfait: c.forfait || payload.forfaitId,
-        date: c.date || c.createdAt || new Date().toISOString(),
+        forfaitName: c.forfaitName || selected.name || payload.name,
+        date: c.date || c.createdAt || localDateOnly,
         price: c.price ?? payload.price,
+        durationValue: c.durationValue ?? payload.durationValue,
+        durationUnit: c.durationUnit || payload.durationUnit, // Ajouter l'unité
+        category: c.category || payload.category,
         used: c.used ?? false,
         ...c,
       }));
@@ -163,13 +175,14 @@ function CodeGeneratorForm({ onGenerateCodes }) {
         generated.push({
           code: codeStr,
           forfait: payload.forfaitId,
+          forfaitName: payload.name,
           category: payload.category,
           durationValue: payload.durationValue,
+          durationUnit: payload.durationUnit, // Ajouter l'unité
           price: payload.price,
           generatedBy: null,
           used: false,
-          date: new Date().toISOString(),
-          forfaitName: payload.name,
+          date: localDateOnly,
         });
       }
       onGenerateCodes(generated);
@@ -304,12 +317,12 @@ function CodeGeneratorForm({ onGenerateCodes }) {
   );
 }
 
-function CodesTable({ codes, onCopyCode }) {
+function CodesTable({ codes, onCopyCode, forfaits, agents }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
-  // Filtrer les codes (adapté aux nouvelles clés)
+  // Filtrer les codes
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return codes;
@@ -324,14 +337,80 @@ function CodesTable({ codes, onCopyCode }) {
     });
   }, [codes, search]);
 
-  const total = filtered.length;
+  // Trier par date décroissante (récent en premier)
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const da = new Date(a.date || a.createdAt || 0).getTime();
+      const db = new Date(b.date || b.createdAt || 0).getTime();
+      return db - da;
+    });
+  }, [filtered]);
+
+  const total = sorted.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const start = (page - 1) * pageSize;
-  const paginated = filtered.slice(start, start + pageSize);
+  const paginated = sorted.slice(start, start + pageSize);
 
   const handleSearch = (value) => {
     setSearch(value);
     setPage(1);
+  };
+
+  // Helper: force l’affichage au format date uniquement (JJ/MM/AAAA)
+  const toDateOnly = (value) => {
+    if (!value) return "";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  };
+
+  // Helper: récupérer le nom du forfait à partir de l'ID
+  const getForfaitName = (value) => {
+    if (!value) return "-";
+    // si déjà un objet avec 'name'
+    if (typeof value === "object" && value?.name) return value.name;
+    // si c’est une chaîne (ID), chercher dans la liste des forfaits
+    const idStr = String(value);
+    const found = Array.isArray(forfaits)
+      ? forfaits.find((f) => String(f._id || f.id) === idStr)
+      : null;
+    return found?.name || found?.nom || "-";
+  };
+
+  // Helper: récupérer le nom de l’agent à partir de l’ID
+  const getAgentName = (value) => {
+    if (!value) return "-";
+    // si déjà une chaîne de nom explicite
+    if (typeof value === "string" && !/^[a-f0-9]{24}$/i.test(value)) return value;
+    // si objet { name } ou { identifiant }
+    if (typeof value === "object") return value.name || value.identifiant || value.login || "-";
+    // sinon chercher par ID dans la liste des agents
+    const idStr = String(value);
+    const found = Array.isArray(agents)
+      ? agents.find((a) => String(a._id || a.id) === idStr)
+      : null;
+    return found?.name || found?.identifiant || found?.login || "-";
+  };
+
+  // Helper: afficher la durée avec l'unité
+  const formatDuration = (code) => {
+    const value = code.durationValue;
+    const unit = code.durationUnit;
+    
+    if (!value || value === 0) return "-";
+    
+    let unitLabel = "";
+    if (unit === "minutes" || unit === "minute") {
+      unitLabel = value > 1 ? "minutes" : "minute";
+    } else if (unit === "hours" || unit === "heure" || unit === "heures") {
+      unitLabel = value > 1 ? "heures" : "heure";
+    } else if (unit === "days" || unit === "jour" || unit === "jours") {
+      unitLabel = value > 1 ? "jours" : "jour";
+    } else {
+      unitLabel = unit || "";
+    }
+    
+    return `${value} ${unitLabel}`;
   };
 
   return (
@@ -378,7 +457,9 @@ function CodesTable({ codes, onCopyCode }) {
                     className={`${code.used ? "bg-gray-50 opacity-60" : "hover:bg-orange-50/50"} transition-colors duration-200 animate-fadeIn`}
                     style={{ animationDelay: `${idx * 50}ms`, transform: "none" }}
                   >
-                    <td className="px-2 md:px-3 py-2 align-middle text-gray-700 whitespace-nowrap">{code.date || new Date(code.createdAt || code.updatedAt || Date.now()).toLocaleDateString("fr-FR")}</td>
+                    <td className="px-2 md:px-3 py-2 align-middle text-gray-700 whitespace-nowrap">
+                      {toDateOnly(code.date || code.createdAt || code.updatedAt || Date.now())}
+                    </td>
                     <td className="px-2 md:px-3 py-2 align-middle">
                       <code className="text-xs font-bold text-[var(--vc-purple)] bg-purple-50 px-1 md:px-2 py-0.5 rounded inline-block">
                         {code.code}
@@ -389,8 +470,14 @@ function CodesTable({ codes, onCopyCode }) {
                         {code.category || "-"}
                       </span>
                     </td>
-                    <td className="px-2 md:px-3 py-2 align-middle font-semibold text-gray-900 whitespace-nowrap text-xs md:text-sm truncate">{code.forfaitName || (code.forfait?.name || code.forfait) || "-"}</td>
-                    <td className="px-2 md:px-3 py-2 align-middle text-gray-700 whitespace-nowrap text-xs md:text-sm">{code.durationValue || "-"}</td>
+                    {/* Forfait : afficher le nom */}
+                    <td className="px-2 md:px-3 py-2 align-middle font-semibold text-gray-900 whitespace-nowrap text-xs md:text-sm truncate">
+                      {code.forfaitName || getForfaitName(code.forfait)}
+                    </td>
+                    {/* Durée : afficher avec l'unité */}
+                    <td className="px-2 md:px-3 py-2 align-middle text-gray-700 whitespace-nowrap text-xs md:text-sm">
+                      {formatDuration(code)}
+                    </td>
                     <td className="px-2 md:px-3 py-2 align-middle">
                       <span className="inline-block px-1 md:px-2 py-0.5 bg-green-50 text-green-700 rounded text-xs font-bold whitespace-nowrap">
                         {code.price != null ? Number(code.price).toLocaleString("fr-FR") + " FCFA" : "-"}
@@ -398,7 +485,7 @@ function CodesTable({ codes, onCopyCode }) {
                     </td>
                     <td className="px-2 md:px-3 py-2 align-middle">
                       <code className="text-xs font-semibold text-gray-600 bg-gray-50 px-1 py-0.5 rounded inline-block whitespace-nowrap">
-                        {code.generatedByName || code.generatedBy || "-"}
+                        {getAgentName(code.generatedByName || code.generatedBy)}
                       </code>
                     </td>
                     <td className="px-2 md:px-3 py-2 align-middle flex items-center gap-2">
@@ -607,7 +694,7 @@ export default function GenererCodeDeConnexions() {
 
           <div>
             <h2 className="text-sm md:text-base font-bold text-gray-900 mb-3">Codes générés ({codes.length})</h2>
-            <CodesTable codes={codes} onCopyCode={handleCopyCode} />
+            <CodesTable codes={codes} onCopyCode={handleCopyCode} forfaits={forfaits} agents={agents} />
           </div>
         </section>
       </main>

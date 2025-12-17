@@ -542,7 +542,10 @@ export default function Accueil() {
               </section>
               {/* --- GRAPHIQUE + TABLEAU --- */}
               <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                <div className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-purple-50 hover:shadow-lg transition-shadow duration-200 overflow-x-auto">
+                <div 
+                  onClick={() => navigate('/statistiques')}
+                  className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-purple-50 hover:shadow-lg transition-shadow duration-200 overflow-x-auto cursor-pointer"
+                >
                   <h3 className="text-purple-700 font-semibold mb-4 text-base sm:text-lg">
                     Historique journalier des connexions
                   </h3>
@@ -553,7 +556,10 @@ export default function Accueil() {
                 </div>
 
                 {/* Tableau Utilisateurs*/}
-                <div className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-white transition-shadow duration-200">
+                <div 
+                  onClick={() => navigate('/groupe-login')}
+                  className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-white hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+                >
                   <h3 className="text-purple-700 font-semibold mb-4 text-base sm:text-lg">
                     Gestion des accès - Utilisateurs connectés
                   </h3>
