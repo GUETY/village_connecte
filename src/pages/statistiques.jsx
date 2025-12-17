@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import Papa from "papaparse"; // Ajout pour export CSV
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement } from "chart.js";
 import { Line, Doughnut } from "react-chartjs-2";
 import Navbar from "../components/navbar";
@@ -18,10 +21,10 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
  * Champs BD : datetime, code, forfait, forfaitType, user
  */
 
-function DateSelector({ onDateChange, selectedDate }) {
+function DateSelector({ onDateChange, selectedDate, onExport, exportDisabled, onExportExcel }) {
   return (
-    <div className="bg-gradient-to-r from-white to-gray-50 rounded-lg p-4 md:p-6 mb-6 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300" style={{ transform: "none", perspective: "none" }}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-6">
+    <div className="bg-gradient-to-r from-white to-gray-50 rounded-lg p-4 md:p-6 mb-6 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-6 justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-gradient-to-br from-orange-100 to-orange-50 rounded-lg border border-orange-200">
             <svg className="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
@@ -30,21 +33,39 @@ function DateSelector({ onDateChange, selectedDate }) {
           </div>
           <label htmlFor="date-selector" className="text-sm font-bold text-gray-900">Sélectionner une date</label>
         </div>
-        <input
-          id="date-selector"
-          type="date"
-          value={selectedDate}
-          onChange={(e) => onDateChange(e.target.value)}
-          className="px-4 py-2.5 border-2 border-orange-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white transition-all hover:border-orange-400 w-full sm:w-56 cursor-pointer shadow-sm hover:shadow-md"
-          aria-label="Sélectionnez une date pour afficher les statistiques"
-        />
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center w-full sm:w-auto">
+          <input
+            id="date-selector"
+            type="date"
+            value={selectedDate}
+            onChange={(e) => onDateChange(e.target.value)}
+            className="px-4 py-2.5 border-2 border-orange-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white transition-all hover:border-orange-400 w-full sm:w-56 cursor-pointer shadow-sm hover:shadow-md"
+            aria-label="Sélectionnez une date pour afficher les statistiques"
+          />
+          <button
+            type="button"
+            onClick={onExport}
+            disabled={exportDisabled}
+            className="px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-[#ff7a00] to-[#ff9933] shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Exporter CSV
+          </button>
+          <button
+            type="button"
+            onClick={onExportExcel}
+            disabled={exportDisabled}
+            className="px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-[#ff7a00] to-[#ffb347] shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Exporter Excel
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-function ConnectionChart({ data }) {
-  const chartRef = useRef(null);
+function ConnectionChart({ data, chartRef }) {  // + chartRef
+  const internalRef = chartRef || useRef(null);
 
   const chartData = {
     labels: ["06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"],
@@ -159,14 +180,14 @@ function ConnectionChart({ data }) {
         Historique journalier des connexions
       </h3>
       <div style={{ height: "280px", minHeight: "280px" }} className="animate-fadeIn">
-        <Line ref={chartRef} data={chartData} options={options} />
+        <Line ref={internalRef} data={chartData} options={options} />
       </div>
     </div>
   );
 }
 
-function ForfaitDistributionChart({ forfaitData }) {
-  const chartRef = useRef(null);
+function ForfaitDistributionChart({ forfaitData, chartRef }) { // + chartRef
+  const internalRef = chartRef || useRef(null);
 
   const chartData = {
     labels: ["Premium", "Standard", "Basic"],
@@ -231,7 +252,7 @@ function ForfaitDistributionChart({ forfaitData }) {
         Distribution des forfaits
       </h3>
       <div style={{ height: "280px", minHeight: "280px" }} className="animate-fadeIn flex items-center justify-center">
-        <Doughnut ref={chartRef} data={chartData} options={options} />
+        <Doughnut ref={internalRef} data={chartData} options={options} />
       </div>
     </div>
   );
@@ -463,6 +484,8 @@ function StatsCards({ totalConnections, peakHour, averageUsers }) {
 }
 
 export default function Statistiques() {
+  const lineChartRef = useRef(null);
+  const doughnutChartRef = useRef(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [allStatistiques, setAllStatistiques] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -570,6 +593,204 @@ export default function Statistiques() {
     : "—";
   const averageUsers = connectionData.length > 0 ? Math.round(connectionData.reduce((a, b) => a + b, 0) / connectionData.length) : 0;
 
+  // Export CSV mieux formaté (tri, BOM, séparateur ;)
+  const handleExportCSV = () => {
+    if (!filteredStatistiques || filteredStatistiques.length === 0) return;
+
+    const sorted = [...filteredStatistiques].sort(
+      (a, b) => new Date(a.datetime) - new Date(b.datetime)
+    );
+
+    const rows = sorted.map((item) => ({
+      Date: new Date(item.datetime).toLocaleDateString("fr-FR"),
+      Heure: new Date(item.datetime).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+      Code: item.code || "",
+      Forfait: item.forfaitType || "",
+      Utilisateur: item.user || "",
+    }));
+
+    const csv = Papa.unparse(rows, {
+      header: true,
+      delimiter: ";",
+      quotes: true,
+    });
+    const csvWithBOM = "\uFEFF" + csv;
+
+    const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `statistiques_${selectedDate}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const buildCrosstab = (rows) => {
+    // Croisé ForfaitType x Utilisateur
+    const users = Array.from(new Set(rows.map(r => r.user || "-"))).sort();
+    const types = Array.from(new Set(rows.map(r => r.forfaitType || "-"))).sort();
+    const matrix = types.map(t => {
+      const row = { forfaitType: t };
+      users.forEach(u => {
+        row[u] = rows.filter(r => (r.forfaitType || "-") === t && (r.user || "-") === u).length;
+      });
+      row.Total = rows.filter(r => (r.forfaitType || "-") === t).length;
+      return row;
+    });
+    const totals = { forfaitType: "Total" };
+    users.forEach(u => {
+      totals[u] = rows.filter(r => (r.user || "-") === u).length;
+    });
+    totals.Total = rows.length;
+    return { users, types, matrix: [...matrix, totals] };
+  };
+
+  const handleExportExcel = async () => {
+    if (!filteredStatistiques.length) return;
+
+    const wb = new ExcelJS.Workbook();
+    const orange = "FF7A00";
+
+    // ===== Feuille Données =====
+    const ws = wb.addWorksheet("Données");
+    const headers = ["Date", "Heure", "Code", "Forfait", "Utilisateur"];
+    ws.addRow(headers);
+    filteredStatistiques.forEach(item => {
+      ws.addRow([
+        new Date(item.datetime).toLocaleDateString("fr-FR"),
+        new Date(item.datetime).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+        item.code || "",
+        item.forfaitType || "",
+        item.user || "",
+      ]);
+    });
+    ws.columns.forEach(col => { col.width = 18; });
+    ws.getRow(1).eachCell(cell => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: orange } };
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.alignment = { horizontal: "center" };
+    });
+    ws.eachRow((row, idx) => {
+      if (idx > 1) row.eachCell(c => c.border = { bottom: { style: "thin", color: { argb: "FFE5E5E5" } } });
+    });
+
+    // ===== Feuille Croisé existante =====
+    const { users, matrix } = buildCrosstab(filteredStatistiques);
+    const wsc = wb.addWorksheet("Croisé");
+    wsc.addRow(["Forfait", ...users, "Total"]);
+    matrix.forEach(r => {
+      wsc.addRow([r.forfaitType, ...users.map(u => r[u] || 0), r.Total || 0]);
+    });
+    wsc.columns.forEach(col => { col.width = 16; });
+    wsc.getRow(1).eachCell(cell => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: orange } };
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.alignment = { horizontal: "center" };
+    });
+
+    // ===== Nouvelle feuille Pivot dynamique =====
+    const wsp = wb.addWorksheet("Pivot dynamique");
+    // 1) Pivot Forfait x Utilisateur (déjà calculé)
+    wsp.addRow(["PIVOT Forfait x Utilisateur"]);
+    wsp.getRow(1).getCell(1).font = { bold: true, color: { argb: orange }, size: 12 };
+    wsp.addRow(["Forfait", ...users, "Total"]);
+    matrix.forEach(r => {
+      const row = wsp.addRow([r.forfaitType, ...users.map(u => r[u] || 0), r.Total || 0]);
+      row.eachCell((cell) => {
+        if (cell.value === "Total" || typeof cell.value === "number") {
+          cell.font = { bold: true };
+        }
+      });
+    });
+
+    // 2) Pivot Forfait x Date (agrégé par jour)
+    const dates = Array.from(
+      new Set(filteredStatistiques.map(s => new Date(s.datetime).toLocaleDateString("fr-FR")))
+    ).sort((a, b) => {
+      const da = a.split("/").reverse().join("-");
+      const db = b.split("/").reverse().join("-");
+      return da.localeCompare(db);
+    });
+    const forfaits = Array.from(new Set(filteredStatistiques.map(s => s.forfaitType || "-"))).sort();
+
+    const pivotStartRow = matrix.length + 4;
+    wsp.getRow(pivotStartRow - 1).getCell(1).value = "PIVOT Forfait x Date";
+    wsp.getRow(pivotStartRow - 1).getCell(1).font = { bold: true, color: { argb: orange }, size: 12 };
+    // En-têtes
+    const headerRow = wsp.getRow(pivotStartRow);
+    headerRow.values = ["Forfait", ...dates, "Total"];
+    headerRow.eachCell(cell => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: orange } };
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.alignment = { horizontal: "center" };
+    });
+
+    // Corps
+    forfaits.forEach(f => {
+      const countsByDate = dates.map(d =>
+        filteredStatistiques.filter(s =>
+          (s.forfaitType || "-") === f &&
+          new Date(s.datetime).toLocaleDateString("fr-FR") === d
+        ).length
+      );
+      const total = countsByDate.reduce((a, b) => a + b, 0);
+      const row = wsp.addRow([f, ...countsByDate, total]);
+      row.eachCell((cell, colNumber) => {
+        if (colNumber === dates.length + 2) {
+          cell.font = { bold: true };
+        }
+      });
+    });
+
+    // Largeurs auto
+    wsp.columns.forEach(col => { col.width = 16; });
+
+    // ===== Feuille Graphiques (images des charts React) =====
+    const wsg = wb.addWorksheet("Graphiques");
+    const charts = [
+      { ref: lineChartRef, title: "Connexions", top: 1 },
+      { ref: doughnutChartRef, title: "Distribution forfaits", top: 20 },
+    ];
+
+    for (const { ref, title, top } of charts) {
+      const chart = ref.current;
+      if (!chart?.toBase64Image) continue;
+      const base64 = chart.toBase64Image("image/png", 1).replace(/^data:image\/png;base64,/, "");
+      const imgId = wb.addImage({ base64, extension: "png" });
+      wsg.addRow([title]);
+      wsg.getRow(top).getCell(1).font = { bold: true, color: { argb: orange } };
+      wsg.addImage(imgId, {
+        tl: { col: 0, row: top },
+        ext: { width: 720, height: 360 },
+        editAs: "oneCell",
+      });
+    }
+
+    // Export fichier
+    const buffer = await wb.xlsx.writeBuffer();
+    saveAs(
+      new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      `statistiques_${selectedDate}.xlsx`
+    );
+  };
+
+  const handleExportCharts = () => {
+    const charts = [
+      { ref: lineChartRef, name: `connexions_${selectedDate}.png` },
+      { ref: doughnutChartRef, name: `forfaits_${selectedDate}.png` },
+    ];
+    charts.forEach(({ ref, name }) => {
+      const chart = ref.current;
+      if (chart?.toBase64Image) {
+        const url = chart.toBase64Image("image/png", 1);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = name;
+        link.click();
+      }
+    });
+  };
+
   if (isLoading) {
     return (
       <Navbar>
@@ -592,16 +813,22 @@ export default function Statistiques() {
     <Navbar>
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6 font-sans antialiased text-gray-800" style={{ transform: "none" }}>
         <section style={{ transform: "none" }}>
-          {/* Sélecteur de date */}
-          <DateSelector onDateChange={setSelectedDate} selectedDate={selectedDate} />
+          {/* Sélecteur de date + export */}
+          <DateSelector
+            onDateChange={setSelectedDate}
+            selectedDate={selectedDate}
+            onExport={handleExportCSV}
+            onExportExcel={handleExportExcel}
+            exportDisabled={filteredStatistiques.length === 0}
+          />
 
           {/* Cartes de statistiques */}
           <StatsCards totalConnections={totalConnections} peakHour={peakHour} averageUsers={averageUsers} />
 
           {/* Graphiques côte à côte */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5 mb-6" style={{ transform: "none" }}>
-            <ConnectionChart data={connectionData} />
-            <ForfaitDistributionChart forfaitData={forfaitDistribution} />
+            <ConnectionChart data={connectionData} chartRef={lineChartRef} />
+            <ForfaitDistributionChart forfaitData={forfaitDistribution} chartRef={doughnutChartRef} />
           </div>
 
           {/* Tableau récapitulatif */}
