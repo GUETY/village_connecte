@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { groupsAPI, usersAPI } from "../../services/api";
 import Navbar1 from "../../components/navbar1.jsx";
 
@@ -81,6 +81,7 @@ export default function CreationDeGroupeEtDeLogin() {
   ];
   const [groups, setGroups] = useState(defaultGroups);
   const [users, setUsers] = useState([]);
+  const [usersSearch, setUsersSearch] = useState("");
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -121,7 +122,7 @@ export default function CreationDeGroupeEtDeLogin() {
         let usersList = [];
         if (Array.isArray(uData)) usersList = uData.filter(Boolean);
         else if (uData?.value && Array.isArray(uData.value)) usersList = uData.value.filter(Boolean);
-        setUsers(usersList);
+        setUsers(sortUsersByLastDesc(usersList));
       } catch (e) {
         console.warn("GroupeLogin: error parsing users list", e);
       }
@@ -149,6 +150,20 @@ export default function CreationDeGroupeEtDeLogin() {
 
     // retourner le label lisible si trouvé, sinon '-' par défaut
     return found ? getGroupLabel(found) : "-";
+  }
+
+  // helper: trier les utilisateurs par dernière connexion (plus récent d'abord)
+  function sortUsersByLastDesc(list) {
+    if (!Array.isArray(list)) return [];
+    return [...list].sort((a, b) => {
+      const getDate = (u) => {
+        if (!u) return 0;
+        const raw = u.updatedAt || u.last || u.createdAt || u.created || u.timestamp || 0;
+        const t = new Date(raw).getTime();
+        return isNaN(t) ? 0 : t;
+      };
+      return getDate(b) - getDate(a);
+    });
   }
 
   const [notif, setNotif] = useState({ type: "", message: "" });
@@ -232,7 +247,7 @@ export default function CreationDeGroupeEtDeLogin() {
       const created = createdRes && typeof createdRes === 'object'
         ? createdRes
         : { id: Date.now().toString(), login: login.trim(), groupe: group, groupName: groupName };
-      setUsers((u) => [created, ...u]);
+      setUsers((u) => sortUsersByLastDesc([created, ...u]));
       setNotif({ type: "success", message: "Information enregistrée avec succès !" });
 
       setLogin("");
@@ -378,8 +393,6 @@ export default function CreationDeGroupeEtDeLogin() {
     groupe: "",
   });
 
-  const [searchGroup, setSearchGroup] = useState(""); // État pour la recherche
-
   function openEditPopup() {
     if (!selectedUser) {
       setNotif({ type: "error", message: "Sélectionnez un utilisateur à modifier." });
@@ -516,6 +529,12 @@ export default function CreationDeGroupeEtDeLogin() {
 
   // Nettoyer les groupes avant le rendu
   const cleanedGroups = cleanGroups(groups);
+
+  // search + dropdown pour la liste "Groupes (défaut)"
+  const [defaultSearch, setDefaultSearch] = useState("");
+  const [showDefaultDropdown, setShowDefaultDropdown] = useState(false);
+  const [highlightDefaultIndex, setHighlightDefaultIndex] = useState(-1);
+  const defaultInputRef = useRef(null);
 
   return (
     <ErrorBoundary>
@@ -657,53 +676,80 @@ export default function CreationDeGroupeEtDeLogin() {
                   </button>
                 </div>
 
-                <div className="w-full sm:w-[300px]">
-                  <label className="block text-sm font-bold mb-2">Groupes (défaut)</label>
-                  
-                  {/* Champ de recherche */}
-                  <input
-                    type="text"
-                    value={searchGroup}
-                    onChange={(e) => setSearchGroup(e.target.value)}
-                    placeholder="Rechercher un groupe..."
-                    className="w-full border-2 border-orange-300 focus:border-orange-500 rounded-lg px-3 py-2 mb-2 text-sm outline-none transition-colors"
-                  />
-
-                  {/* Select avec groupes filtrés */}
-                  <select
-                    size={6}
-                    value={group}
-                    onChange={(e) => {
-                      setGroup(e.target.value);
-                      setSearchGroup(""); // Réinitialiser la recherche après sélection
+                <div className="w-full sm:w-[300px] ">
+                  <label
+                    className="block text-sm font-medium mb-1 cursor-pointer"
+                    onClick={() => {
+                      try { defaultInputRef.current && defaultInputRef.current.focus(); } catch (e) {}
+                      setShowDefaultDropdown(true);
                     }}
-                    className="w-full sm:w-[300px] border-2 border-orange-500 rounded-lg px-2 py-1 bg-white overflow-y-auto text-sm"
                   >
-                    <option value="">Aucun</option>
-                    {cleanedGroups
-                      .filter((g) => 
-                        getGroupLabel(g).toLowerCase().includes(searchGroup.toLowerCase())
-                      )
-                      .map((g, idx) => (
-                        <option key={getGroupKey(g, idx)} value={getGroupValue(g)}>
-                          {getGroupLabel(g)}
-                        </option>
-                      ))}
-                  </select>
+                    Groupes (défaut)
+                  </label>
+                  <div className="relative w-full sm:w-[300px] mb-3">
+                    <input
+                      ref={defaultInputRef}
+                      value={
+                        (group && getGroupLabel(cleanedGroups.find((gg) => String(getGroupValue(gg)) === String(group)))) || defaultSearch
+                      }
+                      onChange={(e) => {
+                        setDefaultSearch(e.target.value);
+                        setShowDefaultDropdown(true);
+                        setHighlightDefaultIndex(-1);
+                        setGroup("");
+                      }}
+                      onFocus={() => setShowDefaultDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowDefaultDropdown(false), 150)}
+                      onKeyDown={(e) => {
+                        const filtered = cleanedGroups.filter((g) => getGroupLabel(g).toLowerCase().includes((defaultSearch || "").toLowerCase()));
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          setHighlightDefaultIndex((i) => Math.min(i + 1, filtered.length - 1));
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          setHighlightDefaultIndex((i) => Math.max(i - 1, 0));
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (highlightDefaultIndex >= 0 && filtered[highlightDefaultIndex]) {
+                            const sel = filtered[highlightDefaultIndex];
+                            setGroup(getGroupValue(sel));
+                            setDefaultSearch(getGroupLabel(sel));
+                            setShowDefaultDropdown(false);
+                          }
+                        }
+                      }}
+                      placeholder="Rechercher un groupe..."
+                      className="w-full sm:w-[300px] border-2 border-orange-500 rounded-lg px-3 py-1.5"
+                    />
 
-                  {/* Message si aucun résultat */}
-                  {searchGroup && cleanedGroups.filter((g) => 
-                    getGroupLabel(g).toLowerCase().includes(searchGroup.toLowerCase())
-                  ).length === 0 && (
-                    <div className="text-xs text-gray-500 mt-2 italic">
-                      Aucun groupe correspondant à "{searchGroup}"
-                    </div>
-                  )}
+                    {showDefaultDropdown && (
+                      <div className="absolute z-30 mt-1 w-full bg-white border rounded shadow max-h-44 overflow-auto">
+                        {cleanedGroups.filter((g) => getGroupLabel(g).toLowerCase().includes((defaultSearch || "").toLowerCase())).length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-gray-500">Aucun groupe</div>
+                        ) : (
+                          cleanedGroups.filter((g) => getGroupLabel(g).toLowerCase().includes((defaultSearch || "").toLowerCase())).map((g, idx) => (
+                            <div
+                              key={getGroupKey(g, idx)}
+                              onMouseDown={() => {
+                                setGroup(getGroupValue(g));
+                                setDefaultSearch(getGroupLabel(g));
+                                setShowDefaultDropdown(false);
+                              }}
+                              onMouseEnter={() => setHighlightDefaultIndex(idx)}
+                               className={`px-3 py-2 cursor-pointer text-sm ${highlightDefaultIndex === idx ? 'bg-orange-100' : ''}`}
+                            >
+                              {getGroupLabel(g)}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="mt-2 flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={handleDeleteGroup}
-                      className={`px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm w-full sm:w-auto transition-all ${loading.deleteGroup ? 'opacity-60 cursor-not-allowed' : 'hover:bg-red-700'}`}
+                      className={`px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm w-full sm:w-auto sm:ml-8 ${loading.deleteGroup ? 'opacity-60 cursor-not-allowed' : ''}`}
                       disabled={loading.deleteGroup}
                     >
                       {loading.deleteGroup ? 'Suppression...' : 'Supprimer le groupe sélectionné'}
@@ -722,44 +768,52 @@ export default function CreationDeGroupeEtDeLogin() {
                 <div className="hidden sm:block">Dernière connexion</div>
               </div>
 
+              {/* search row under header: place input under 'Dernière connexion' column */}
+              <div className="bg-white border-b px-2 sm:px-3 py-2 grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-0 items-center">
+                <div />
+                <div className="hidden sm:block" />
+                <div className="hidden sm:block" />
+                <div className="hidden sm:block flex justify-end">
+                  <div className="w-full sm:w-[220px]">
+                    <input
+                      value={usersSearch}
+                      onChange={(e) => setUsersSearch(e.target.value)}
+                      placeholder="Rechercher un login..."
+                      className="w-full border-2 border-gray-200 rounded px-3 py-1 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="overflow-x-auto">
-                {users.length === 0 ? (
+                {(!users || users.length === 0) ? (
                   <div className="px-3 py-3 text-gray-500 text-center italic text-sm">
                     Aucun utilisateur enregistré
                   </div>
                 ) : (
-                  users.map((u) => {
-                    const userId = u._id || u.id;
-                    const selectedUserId = selectedUser?._id || selectedUser?.id;
-                    const isSelected = userId && selectedUserId && userId === selectedUserId;
-
-                    return (
-                      <div
-                        key={userId}
-                        onClick={() => {
-                          // Désélection au deuxième clic sur la même ligne
-                          if (isSelected) {
-                            setSelectedUser(null);
-                          } else {
-                            setSelectedUser(u);
-                          }
-                        }}
-                        className={`grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-0 px-2 sm:px-3 py-2 text-xs sm:text-sm cursor-pointer border-b transition-all duration-150
-                          ${isSelected ? "bg-orange-200 font-medium" : "hover:bg-gray-50"}`}
-                      >
-                        <div className="truncate">{u.login || u.name || "-"}</div>
-                        <div className="hidden sm:block truncate">
-                          {u.groupName || getGroupNameById(u.group || u.groupe) || "-"}
-                        </div>
-                        <div className="hidden sm:block truncate">
-                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString("fr-CA") : u.created || "-"}
-                        </div>
-                        <div className="hidden sm:block truncate">
-                          {u.updatedAt ? new Date(u.updatedAt).toLocaleString("fr-FR") : u.last || "-"}
-                        </div>
+                  (usersSearch ? users.filter((u) => ((u.login || u.name || '').toString().toLowerCase().includes((usersSearch||'').toLowerCase()))) : users).map((u) => (
+                    <div
+                      key={u._id || u.id}
+                      onClick={() => setSelectedUser((prev) => {
+                        const prevId = prev ? (prev._id || prev.id) : null;
+                        const thisId = u ? (u._id || u.id) : null;
+                        return prevId === thisId ? null : u;
+                      })}
+                      className={`grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-0 px-2 sm:px-3 py-2 text-xs sm:text-sm cursor-pointer border-b 
+                        ${selectedUser?._id === u._id ? "bg-orange-200" : "hover:bg-gray-50"}`}
+                    >
+                      <div className="truncate">{u.login || u.name || "-"}</div>
+                      <div className="hidden sm:block truncate">
+                        {u.groupName || getGroupNameById(u.group || u.groupe) || "-"}
                       </div>
-                    );
-                  })
+                      <div className="hidden sm:block truncate">
+                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString("fr-CA") : u.created || "-"}
+                      </div>
+                      <div className="hidden sm:block truncate">
+                        {u.updatedAt ? new Date(u.updatedAt).toLocaleString("fr-FR") : u.last || "-"}
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             </div>

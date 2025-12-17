@@ -11,6 +11,17 @@ export default function GestionDesAccesUtilisateurs() {
   // === Période globale ===
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
+  // Toast d'information animé
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastError, setToastError] = useState(false);
+
+  const showToast = (msg, isError = false, ms = 3000) => {
+    setToastMessage(msg);
+    setToastError(!!isError);
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), ms);
+  };
 
   // horaires / durée / priorité
   const [timeStart, setTimeStart] = useState("");
@@ -165,13 +176,14 @@ export default function GestionDesAccesUtilisateurs() {
       try {
         // TODO: Implémenter l'API pour sauvegarder les règles d'accès
         // const res = await accessRulesAPI.save(payload);
-        window.alert("Règles enregistrées localement.");
+        // show animated toast instead of alert
+        showToast("Enregistré");
       } catch (err) {
         console.error("save access rules error:", err);
-        window.alert("Erreur lors de l'enregistrement des règles");
+        showToast("Erreur lors de l'enregistrement des règles", true);
       }
     } else {
-      window.alert("Aucun login ou groupe sélectionné — les données ont été appliquées localement seulement.");
+      showToast("Aucun login ou groupe sélectionné — appliqué localement", true);
     }
 
     resetLeftFields();
@@ -180,6 +192,14 @@ export default function GestionDesAccesUtilisateurs() {
   return (
     <Navbar>
       <div className="min-h-screen pt-28 pl-8 pr-4 bg-white w-full max-w-[3000px] mx-auto">
+        {/* Toast animé */}
+        <div aria-live="polite" className="pointer-events-none fixed inset-0 flex items-start justify-end p-6 z-50">
+          <div className="w-full flex flex-col items-end">
+            <div className={`transform transition-all duration-300 pointer-events-auto ${toastVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+              <div className={`${toastError ? 'bg-red-600' : 'bg-green-600'} text-white px-4 py-2 rounded shadow-lg text-sm`}>{toastMessage}</div>
+            </div>
+          </div>
+        </div>
         {/* SÉLECTEURS */}
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-10">
@@ -586,6 +606,12 @@ export default function GestionDesAccesUtilisateurs() {
               >
                 Valider
               </button>
+              {/* Inline fallback visible near the button when toast fails */}
+              {toastVisible && (
+                <div className={`ml-3 text-sm ${toastError ? 'text-red-600' : 'text-green-600'}`}>
+                  {toastMessage}
+                </div>
+              )}
 
             </div>
           </div>
