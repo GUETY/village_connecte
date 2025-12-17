@@ -378,6 +378,8 @@ export default function CreationDeGroupeEtDeLogin() {
     groupe: "",
   });
 
+  const [searchGroup, setSearchGroup] = useState(""); // État pour la recherche
+
   function openEditPopup() {
     if (!selectedUser) {
       setNotif({ type: "error", message: "Sélectionnez un utilisateur à modifier." });
@@ -656,25 +658,52 @@ export default function CreationDeGroupeEtDeLogin() {
                 </div>
 
                 <div className="w-full sm:w-[300px]">
-                  <label className="block text-sm font-medium mb-1">Groupes (défaut)</label>
+                  <label className="block text-sm font-bold mb-2">Groupes (défaut)</label>
+                  
+                  {/* Champ de recherche */}
+                  <input
+                    type="text"
+                    value={searchGroup}
+                    onChange={(e) => setSearchGroup(e.target.value)}
+                    placeholder="Rechercher un groupe..."
+                    className="w-full border-2 border-orange-300 focus:border-orange-500 rounded-lg px-3 py-2 mb-2 text-sm outline-none transition-colors"
+                  />
+
+                  {/* Select avec groupes filtrés */}
                   <select
                     size={6}
                     value={group}
-                    onChange={(e) => setGroup(e.target.value)}
+                    onChange={(e) => {
+                      setGroup(e.target.value);
+                      setSearchGroup(""); // Réinitialiser la recherche après sélection
+                    }}
                     className="w-full sm:w-[300px] border-2 border-orange-500 rounded-lg px-2 py-1 bg-white overflow-y-auto text-sm"
                   >
                     <option value="">Aucun</option>
-                    {cleanedGroups.map((g, idx) => (
-                      <option key={getGroupKey(g, idx)} value={getGroupValue(g)}>
-                        {getGroupLabel(g)}
-                      </option>
-                    ))}
+                    {cleanedGroups
+                      .filter((g) => 
+                        getGroupLabel(g).toLowerCase().includes(searchGroup.toLowerCase())
+                      )
+                      .map((g, idx) => (
+                        <option key={getGroupKey(g, idx)} value={getGroupValue(g)}>
+                          {getGroupLabel(g)}
+                        </option>
+                      ))}
                   </select>
+
+                  {/* Message si aucun résultat */}
+                  {searchGroup && cleanedGroups.filter((g) => 
+                    getGroupLabel(g).toLowerCase().includes(searchGroup.toLowerCase())
+                  ).length === 0 && (
+                    <div className="text-xs text-gray-500 mt-2 italic">
+                      Aucun groupe correspondant à "{searchGroup}"
+                    </div>
+                  )}
 
                   <div className="mt-2 flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={handleDeleteGroup}
-                      className={`px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm w-full sm:w-auto ${loading.deleteGroup ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      className={`px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm w-full sm:w-auto transition-all ${loading.deleteGroup ? 'opacity-60 cursor-not-allowed' : 'hover:bg-red-700'}`}
                       disabled={loading.deleteGroup}
                     >
                       {loading.deleteGroup ? 'Suppression...' : 'Supprimer le groupe sélectionné'}
@@ -699,25 +728,38 @@ export default function CreationDeGroupeEtDeLogin() {
                     Aucun utilisateur enregistré
                   </div>
                 ) : (
-                  users.map((u) => (
-                    <div
-                      key={u._id || u.id}
-                      onClick={() => setSelectedUser(u)}
-                      className={`grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-0 px-2 sm:px-3 py-2 text-xs sm:text-sm cursor-pointer border-b 
-                        ${selectedUser?._id === u._id ? "bg-orange-200" : "hover:bg-gray-50"}`}
-                    >
-                      <div className="truncate">{u.login || u.name || "-"}</div>
-                      <div className="hidden sm:block truncate">
-                        {u.groupName || getGroupNameById(u.group || u.groupe) || "-"}
+                  users.map((u) => {
+                    const userId = u._id || u.id;
+                    const selectedUserId = selectedUser?._id || selectedUser?.id;
+                    const isSelected = userId && selectedUserId && userId === selectedUserId;
+
+                    return (
+                      <div
+                        key={userId}
+                        onClick={() => {
+                          // Désélection au deuxième clic sur la même ligne
+                          if (isSelected) {
+                            setSelectedUser(null);
+                          } else {
+                            setSelectedUser(u);
+                          }
+                        }}
+                        className={`grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-0 px-2 sm:px-3 py-2 text-xs sm:text-sm cursor-pointer border-b transition-all duration-150
+                          ${isSelected ? "bg-orange-200 font-medium" : "hover:bg-gray-50"}`}
+                      >
+                        <div className="truncate">{u.login || u.name || "-"}</div>
+                        <div className="hidden sm:block truncate">
+                          {u.groupName || getGroupNameById(u.group || u.groupe) || "-"}
+                        </div>
+                        <div className="hidden sm:block truncate">
+                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString("fr-CA") : u.created || "-"}
+                        </div>
+                        <div className="hidden sm:block truncate">
+                          {u.updatedAt ? new Date(u.updatedAt).toLocaleString("fr-FR") : u.last || "-"}
+                        </div>
                       </div>
-                      <div className="hidden sm:block truncate">
-                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString("fr-CA") : u.created || "-"}
-                      </div>
-                      <div className="hidden sm:block truncate">
-                        {u.updatedAt ? new Date(u.updatedAt).toLocaleString("fr-FR") : u.last || "-"}
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
