@@ -166,7 +166,7 @@ function ForfaitForm({ onAddForfait, categories, editingIndex, editingData, onCa
       name: "",
       description: "",
       durationValue: "",
-      durationUnit: "days",
+      durationUnit: "days", // Valeur par défaut
       price: "",
     }
   );
@@ -268,7 +268,7 @@ function ForfaitForm({ onAddForfait, categories, editingIndex, editingData, onCa
         name: "",
         description: "",
         durationValue: "",
-        durationUnit: "days",
+        durationUnit: "days", // Réinitialiser à "days"
         price: "",
       });
       setManualMontant(false);
@@ -289,7 +289,7 @@ function ForfaitForm({ onAddForfait, categories, editingIndex, editingData, onCa
       name: "",
       description: "",
       durationValue: "",
-      durationUnit: "days",
+      durationUnit: "days", // Réinitialiser à "days"
       price: "",
     });
     if (onCancelEdit) onCancelEdit();
@@ -604,7 +604,12 @@ function ForfaitTable({ forfaits, onEdit, onDelete, onFilter, filterText }) {
                     <td className="px-2 md:px-4 py-2.5 align-middle text-gray-700 text-xs md:text-sm truncate">{forfait.description || "-"}</td>
                     <td className="px-2 md:px-4 py-2.5 align-middle">
                       <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium whitespace-nowrap">
-                        {forfait.durationValue} {forfait.durationUnit === "minutes" ? "min" : forfait.durationUnit === "hours" ? "h" : "j"}
+                        {forfait.durationValue} {
+                          forfait.durationUnit === "minutes" ? "min" : 
+                          forfait.durationUnit === "hours" ? "h" : 
+                          forfait.durationUnit === "days" ? "j" : 
+                          forfait.durationUnit
+                        }
                       </span>
                     </td>
                     <td className="px-2 md:px-4 py-2.5 align-middle">

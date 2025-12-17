@@ -65,7 +65,7 @@ export default function Login() {
       }
 
       // Redirection après connexion réussie (adapter la route si besoin)
-      navigate("/consultation-des-alertes");
+      navigate("/Dashboard");
     } catch (err) {
       // Gestion et affichage d'erreur : privilégier le message serveur si présent
       console.error("Login error", err);

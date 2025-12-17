@@ -515,14 +515,6 @@ export default function CreationDeGroupeEtDeLogin() {
   // Nettoyer les groupes avant le rendu
   const cleanedGroups = cleanGroups(groups);
 
-  // dropdown pour la liste "Groupes (défaut)" (recherche + sélection)
-  const [defaultSearch, setDefaultSearch] = useState("");
-  const [showDefaultDropdown, setShowDefaultDropdown] = useState(false);
-  const [highlightDefaultIndex, setHighlightDefaultIndex] = useState(-1);
-  const filteredDefaultGroups = cleanedGroups.filter((g) =>
-    getGroupLabel(g).toLowerCase().includes((defaultSearch || "").toLowerCase())
-  );
-
   return (
     <ErrorBoundary>
       <Navbar1 onSidebarToggle={(isOpen) => setSidebarOpen(isOpen)}>
@@ -665,63 +657,19 @@ export default function CreationDeGroupeEtDeLogin() {
 
                 <div className="w-full sm:w-[300px]">
                   <label className="block text-sm font-medium mb-1">Groupes (défaut)</label>
-
-                  <div className="relative w-full sm:w-[300px]">
-                    <input
-                      value={
-                        (group && getGroupLabel(cleanedGroups.find((gg) => String(getGroupValue(gg)) === String(group)))) || defaultSearch
-                      }
-                      onChange={(e) => {
-                        setDefaultSearch(e.target.value);
-                        setShowDefaultDropdown(true);
-                        setHighlightDefaultIndex(-1);
-                      }}
-                      onFocus={() => setShowDefaultDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowDefaultDropdown(false), 150)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'ArrowDown') {
-                          e.preventDefault();
-                          setHighlightDefaultIndex((i) => Math.min(i + 1, filteredDefaultGroups.length - 1));
-                        } else if (e.key === 'ArrowUp') {
-                          e.preventDefault();
-                          setHighlightDefaultIndex((i) => Math.max(i - 1, 0));
-                        } else if (e.key === 'Enter') {
-                          e.preventDefault();
-                          if (highlightDefaultIndex >= 0 && filteredDefaultGroups[highlightDefaultIndex]) {
-                            const sel = filteredDefaultGroups[highlightDefaultIndex];
-                            setGroup(getGroupValue(sel));
-                            setDefaultSearch("");
-                            setShowDefaultDropdown(false);
-                          }
-                        }
-                      }}
-                      placeholder="Rechercher un groupe..."
-                      className="w-full border-2 border-orange-500 rounded-lg px-2 py-1 bg-white text-sm"
-                    />
-
-                    {showDefaultDropdown && (
-                      <div className="absolute z-30 mt-1 w-full bg-white border rounded shadow max-h-44 overflow-auto">
-                        {filteredDefaultGroups.length === 0 ? (
-                          <div className="px-3 py-2 text-sm text-gray-500">Aucun groupe</div>
-                        ) : (
-                          filteredDefaultGroups.map((g, idx) => (
-                            <div
-                              key={getGroupKey(g, idx)}
-                              onMouseDown={() => {
-                                setGroup(getGroupValue(g));
-                                setDefaultSearch("");
-                                setShowDefaultDropdown(false);
-                              }}
-                              onMouseEnter={() => setHighlightDefaultIndex(idx)}
-                              className={`px-3 py-2 cursor-pointer text-sm ${highlightDefaultIndex === idx ? 'bg-orange-100' : ''}`}
-                            >
-                              {getGroupLabel(g)}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <select
+                    size={6}
+                    value={group}
+                    onChange={(e) => setGroup(e.target.value)}
+                    className="w-full sm:w-[300px] border-2 border-orange-500 rounded-lg px-2 py-1 bg-white overflow-y-auto text-sm"
+                  >
+                    <option value="">Aucun</option>
+                    {cleanedGroups.map((g, idx) => (
+                      <option key={getGroupKey(g, idx)} value={getGroupValue(g)}>
+                        {getGroupLabel(g)}
+                      </option>
+                    ))}
+                  </select>
 
                   <div className="mt-2 flex flex-col sm:flex-row gap-2">
                     <button
