@@ -16,6 +16,7 @@ export default function GestionDesAlertes() {
   const [bornes, setBornes] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
+  const [searchQuery, setSearchQuery] = useState("");
   // confirmation modal state (remplace window.confirm to avoid native 'localhost' dialog)
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState(null);
@@ -45,9 +46,27 @@ export default function GestionDesAlertes() {
     ],
   };
 
+  // helper: trier les alertes du plus récent au plus ancien
+  function sortAlertsDesc(list) {
+    if (!Array.isArray(list)) return [];
+    return [...list].sort((a, b) => {
+      const getDate = (x) => {
+        if (!x) return 0;
+        return new Date(x.createdAt || x.dateEmission || x.metadata?.dateConstat || x.created || x.timestamp || 0).getTime() || 0;
+      };
+      return getDate(b) - getDate(a);
+    });
+  }
+
   function handleValider() {
     if (!identifiant) {
       setNotif({ type: 'error', message: "Veuillez choisir un identifiant d'abord." });
+      setTimeout(() => setNotif({ type: '', message: '' }), 3000);
+      return;
+    }
+
+    if (!date) {
+      setNotif({ type: 'error', message: "Veuillez choisir une date d'abord." });
       setTimeout(() => setNotif({ type: '', message: '' }), 3000);
       return;
     }
@@ -66,20 +85,27 @@ export default function GestionDesAlertes() {
         };
         const res = await alertesAPI.create(payload);
         const created = res?.data;
-        if (created) setRows((r) => [created, ...r]);
-        else
-          setRows((r) => [
-            ...r,
-            {
-              _id: `temp-${r.length + 1}`,
-              createdAt: payload.metadata.dateConstat || new Date().toISOString(),
-              type: payload.type,
-              code: payload.code,
-              emitter: payload.emitter,
-              message: payload.message,
-            },
-          ]);
+        if (created) {
+          setRows((r) => sortAlertsDesc([created, ...r]));
+        } else {
+          setRows((r) =>
+            sortAlertsDesc([
+              ...r,
+              {
+                _id: `temp-${r.length + 1}`,
+                createdAt: payload.metadata.dateConstat || new Date().toISOString(),
+                type: payload.type,
+                code: payload.code,
+                emitter: payload.emitter,
+                message: payload.message,
+              },
+            ])
+          );
+        }
         setAutres("");
+        // afficher un toast de succès animé
+        setNotif({ type: 'success', message: 'Validé avec succès.' });
+        setTimeout(() => setNotif({ type: '', message: '' }), 2500);
       } catch (err) {
         console.error("create alerte error:", err);
         setNotif({ type: "error", message: "Erreur lors de la création de l'alerte." });
@@ -108,9 +134,9 @@ export default function GestionDesAlertes() {
         // Récupérer les alertes
         const alertesData = await alertesAPI.list();
         if (Array.isArray(alertesData)) {
-          setRows(alertesData);
+          setRows(sortAlertsDesc(alertesData));
         } else if (alertesData?.value && Array.isArray(alertesData.value)) {
-          setRows(alertesData.value);
+          setRows(sortAlertsDesc(alertesData.value));
         }
       } catch (err) {
         console.error("fetch alertes error:", err);
@@ -359,11 +385,38 @@ export default function GestionDesAlertes() {
             <div className="text-right">Actions</div>
           </div>
 
+          {/* search row: input placed under 'Alertes' column (between Alertes et Actions) */}
+          <div className="bg-white border-b px-3 sm:px-4 py-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 items-center">
+            <div />
+            <div className="hidden sm:block" />
+            <div />
+            <div className="hidden lg:block" />
+            <div />
+            <div className="flex items-center justify-end">
+              <div className="w-full sm:w-[220px] flex items-center">
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher une alerte..."
+                  className="w-full border-2 border-gray-200 rounded px-3 py-1 text-sm"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="ml-2 text-sm text-gray-500">Effacer</button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white max-h-64 overflow-auto">
             {rows.length === 0 ? (
               <div className="p-6 text-center text-gray-500">Aucune alerte</div>
             ) : (
-              rows.map((r) => (
+              // filtrer les alertes selon la recherche
+              (searchQuery ? rows.filter((r) => {
+                const q = (searchQuery || '').toString().toLowerCase();
+                const fields = [r.message, r.code, r.emitter, r.type, r.identifiant, r.alertes].filter(Boolean).map(String).join(' ').toLowerCase();
+                return fields.includes(q);
+              }) : rows).map((r) => (
                 <div key={r._id || r.id} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 px-3 sm:px-4 py-3 border-b last:border-none text-sm items-center gap-2">
                   <div className="truncate">{r.dateEmission || (r.createdAt ? new Date(r.createdAt).toLocaleDateString('fr-CA') : '')}</div>
                   <div className="hidden sm:block">{r.type || r.codeType}</div>
