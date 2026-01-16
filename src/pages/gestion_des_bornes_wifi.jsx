@@ -377,23 +377,30 @@ export default function GestionDesBornesWifi() {
     let mounted = true;
     async function loadBornes() {
       try {
-        const data = await bornesAPI.list();
+        const data = await bornesAPI.list();  // ← Maintenant avec axios + token
         if (!mounted) return;
         
-        // Mapper les données du backend vers la structure UI
-        const mapped = (Array.isArray(data) ? data : []).map((item) => ({
+        console.log("Données reçues:", data);
+        
+        // Gérer si c'est un objet avec propriété .data
+        const bornesArray = Array.isArray(data) ? data : 
+                           Array.isArray(data?.data) ? data.data : [];
+        
+        const mapped = bornesArray.map((item) => ({
           id: item._id || item.id,
           name: item.name || "",
           ip: item.ip || "",
-          status: item.status || "EN_SERVICE",
-          traficMb: item.traffic ? Math.round(item.traffic / (1024 * 1024)) : 0, // convertir bytes en MB
-          connexions: 0, // non fourni dans le schéma backend
-          etat: item.status || "EN_SERVICE",
-          acces: "autorisé", // non fourni dans le schéma backend (statique pour l'exemple)
-          frequenceRedemarrage: 24, // non fourni dans le schéma backend
+          status: item.status || "HORS_LIGNE",
+          traficMb: item.traffic ? Math.round(item.traffic / (1024 * 1024)) : 0,
+          connexions: item.connexions || item.connections || 0,
+          etat: item.status || "HORS_LIGNE",
+          acces: item.acces || "autorisé",
+          frequenceRedemarrage: item.frequenceRedemarrage || 24,
           temperature: item.temperature || 0,
-          lastSeen: item.lastSeen,
+          lastSeen: item.lastSeen || null,
         }));
+        
+        console.log("Données mappées:", mapped);
         setBornes(mapped);
       } catch (err) {
         const status = err?.status || err?.statusCode || err?.response?.status;
@@ -421,14 +428,12 @@ export default function GestionDesBornesWifi() {
   async function handleValidate() {
     setIsValidating(true);
     try {
-      await new Promise((r) => setTimeout(r, 700));
-      setIsValidating(false);
-
-      // Envoyer mise à jour au serveur
       const borneData = selectedForPanel;
+      
+      // Envoyer mise à jour au serveur
       await bornesAPI.update(showPanelId, {
         status: borneData.status,
-        // autres champs si nécessaire
+        acces: borneData.acces,  // ← Ajouter l'accès
       });
 
       const msg = `✓ Configuration appliquée pour ${selectedForPanel.name}`;
@@ -445,11 +450,13 @@ export default function GestionDesBornesWifi() {
     } catch (err) {
       setIsValidating(false);
       const status = err?.status || err?.statusCode || err?.response?.status;
-      setValidateMsg("Erreur lors de l'application");
+      setValidateMsg("❌ Erreur lors de l'application");
       setShowValidateNotif(true);
       if (status === 401) {
         window.location.href = "/login";
       }
+    } finally {
+      setIsValidating(false);
     }
   }
 
@@ -513,12 +520,13 @@ export default function GestionDesBornesWifi() {
           name: item.name || "",
           ip: item.ip || "",
           status: item.status || "EN_SERVICE",
-          traficMb: item.traffic ? Math.round(item.traffic / (1024 * 1024)) : 0,
-          connexions: 0,
+          // Même correction pour le reset
+          traficMb: item.data_usage ? Math.round(item.data_usage / (1024 * 1024)) : 0,
+          connexions: item.connexions || item.connections || item.activeConnections || item.connectedUsers || 0,
           etat: item.status || "EN_SERVICE",
-          acces: "autorisé",
-          frequenceRedemarrage: 24,
-          temperature: item.temperature || 0,
+          acces: item.acces || item.access || "autorisé",
+          frequenceRedemarrage: item.frequenceRedemarrage || item.rebootFrequency || 24,
+          temperature: item.temperature || item.temp || 0,
         }));
         setBornes(mapped);
         setSelectedId(null);
@@ -549,21 +557,46 @@ export default function GestionDesBornesWifi() {
   }
 
   // Confirmation acceptée pour changement d'état
-  function handleConfirmEtat() {
+  async function handleConfirmEtat() {
     setShowEtatConfirm(false);
-    if (!pendingEtat) return;
-    setBornes((prev) => prev.map((b) => (b.id === showPanelId ? { ...b, status: pendingEtat, etat: pendingEtat } : b)));
-    setEtatNotifMsg(`✓ État modifié en "${pendingEtat}" pour ${selectedForPanel.name || "la borne"}`);
-    setEtatNotifType("success");
-    setShowEtatNotif(true);
-    setFlashId(showPanelId);
+    if (!pendingEtat || !showPanelId) return;
+
+    const borneId = showPanelId;
+    const newStatus = pendingEtat;
+    const originalBornes = bornes; // Sauvegarder l'état original
+
+    // 1. Mettre à jour l'état local immédiatement
+    setBornes((prev) =>
+      prev.map((b) =>
+        b.id === borneId ? { ...b, status: newStatus, etat: newStatus } : b
+      )
+    );
+    setFlashId(borneId);
     setTimeout(() => setFlashId(null), 700);
     setPendingEtat(null);
 
+    // Fermer le panneau
     setTimeout(() => {
       setShowPanelId(null);
       setSelectedId(null);
     }, 800);
+
+    // 2. Envoyer la mise à jour au serveur
+    try {
+      await bornesAPI.update(borneId, { status: newStatus });
+      // Succès : Afficher la notification
+      const borneName = originalBornes.find(b => b.id === borneId)?.name || "la borne";
+      setEtatNotifMsg(`✓ État modifié en "${newStatus}" pour ${borneName}`);
+      setEtatNotifType("success");
+      setShowEtatNotif(true);
+    } catch (err) {
+      console.error("Erreur de sauvegarde de l'état:", err);
+      // Erreur : Annuler la modification locale et afficher une erreur
+      setBornes(originalBornes);
+      setEtatNotifMsg("❌ Erreur lors de la sauvegarde de l'état.");
+      setEtatNotifType("error");
+      setShowEtatNotif(true);
+    }
   }
 
   // Confirmation annulée pour changement d'état
@@ -588,21 +621,46 @@ export default function GestionDesBornesWifi() {
   }
 
   // Confirmation acceptée pour changement d'accès
-  function handleConfirmAccess() {
+  async function handleConfirmAccess() {
     setShowAccessConfirm(false);
-    if (!pendingAccess) return;
-    setBornes((prev) => prev.map((b) => (b.id === showPanelId ? { ...b, acces: pendingAccess } : b)));
-    setAccessNotifMsg(`✓ Accès mis à jour : ${pendingAccess} pour ${selectedForPanel.name || "la borne"}`);
-    setAccessNotifType("success");
-    setShowAccessNotif(true);
-    setFlashId(showPanelId);
+    if (!pendingAccess || !showPanelId) return;
+
+    const borneId = showPanelId;
+    const newAccess = pendingAccess;
+    const originalBornes = bornes; // Sauvegarder l'état original
+
+    // 1. Mettre à jour l'état local immédiatement pour la réactivité
+    setBornes((prev) =>
+      prev.map((b) =>
+        b.id === borneId ? { ...b, acces: newAccess } : b
+      )
+    );
+    setFlashId(borneId);
     setTimeout(() => setFlashId(null), 700);
     setPendingAccess(null);
 
+    // Fermer le panneau
     setTimeout(() => {
       setShowPanelId(null);
       setSelectedId(null);
     }, 800);
+
+    // 2. Envoyer la mise à jour au serveur
+    try {
+      await bornesAPI.update(borneId, { acces: newAccess });
+      // Succès : Afficher la notification
+      const borneName = originalBornes.find(b => b.id === borneId)?.name || "la borne";
+      setAccessNotifMsg(`✓ Accès mis à jour : ${newAccess} pour ${borneName}`);
+      setAccessNotifType("success");
+      setShowAccessNotif(true);
+    } catch (err) {
+      console.error("Erreur de sauvegarde de l'accès:", err);
+      // Erreur : Annuler la modification locale et afficher une erreur
+      setBornes(originalBornes); // Revenir à l'état d'origine
+      setAccessNotifMsg("❌ Erreur lors de la sauvegarde de l'accès.");
+      setAccessNotifType("error");
+      setShowAccessNotif(true);
+    }
   }
 
   // Confirmation annulée pour changement d'accès

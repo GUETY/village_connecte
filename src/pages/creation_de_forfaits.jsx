@@ -618,20 +618,20 @@ function ForfaitTable({ forfaits, onEdit, onDelete, onFilter, filterText }) {
                       </span>
                     </td>
                     <td className="px-2 md:px-4 py-2.5 align-middle">
-                      <div className="flex gap-1 flex-wrap">
+                      <div className="flex gap-1 flex-row">
                         <button
                           onClick={() => onEdit(forfaits.indexOf(forfait))}
-                          className="inline-flex items-center gap-0.5 px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
                           title="Modifier"
                         >
-                          ✏️ Modifier
+                          <span role="img" aria-label="modifier">✏️</span> Modifier
                         </button>
                         <button
                           onClick={() => handleDeleteClick(forfaits.indexOf(forfait))}
-                          className="inline-flex items-center gap-0.5 px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200 transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-600 hover:bg-red-200 transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
                           title="Supprimer"
                         >
-                          🗑️ Supprimer
+                          <span role="img" aria-label="supprimer">🗑️</span> Supprimer
                         </button>
                       </div>
                     </td>
@@ -668,6 +668,8 @@ export default function CreationDeForfaits() {
   const [filterText, setFilterText] = useState("");
   const [editingIndex, setEditingIndex] = useState(undefined);
   const [editingData, setEditingData] = useState(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   // Charger depuis l'API au montage (utilise setAuthToken si token présent)
   useEffect(() => {
@@ -688,6 +690,10 @@ export default function CreationDeForfaits() {
       });
     return () => (mounted = false);
   }, []);
+
+  // Pagination : calcul des forfaits à afficher
+  const paginatedForfaits = forfaits.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.ceil(forfaits.length / pageSize);
 
   // handlers inchangés mais adaptés pour champs BDD dans ForfaitTable / ajout suppression
   const handleAddForfait = (createdForfait, editingIdx) => {
@@ -744,14 +750,46 @@ export default function CreationDeForfaits() {
           <div>
             <h2 className="text-sm md:text-base font-bold text-gray-900 mb-3">Liste des forfaits</h2>
             <ForfaitTable 
-              forfaits={forfaits} 
+              forfaits={paginatedForfaits} 
               onEdit={handleEditForfait} 
               onDelete={handleDeleteForfait}
             />
+
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-end items-center gap-2 mt-4 select-none">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className={`px-4 py-1.5 rounded-lg font-bold text-sm transition-all shadow-sm border-2
+                    ${page === 1
+                      ? "bg-orange-100 text-orange-300 border-orange-100 cursor-not-allowed"
+                      : "bg-orange-100 text-orange-600 border-orange-100 hover:bg-orange-200 hover:text-orange-700 hover:scale-105 active:scale-95"}
+                  `}
+                  style={{ minWidth: 70 }}
+                >
+                  ← Préc
+                </button>
+                <span className="text-sm font-semibold text-gray-700 px-2">
+                  {page} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className={`px-4 py-1.5 rounded-lg font-bold text-sm transition-all shadow-sm border-2
+                    ${page === totalPages
+                      ? "bg-orange-100 text-orange-300 border-orange-100 cursor-not-allowed"
+                      : "bg-orange-500 text-white border-orange-500 hover:bg-orange-600 hover:scale-105 active:scale-95"}
+                  `}
+                  style={{ minWidth: 70 }}
+                >
+                  Suiv →
+                </button>
+              </div>
+            )}
           </div>
         </section>
       </main>
-
       {/* CSS pour animations */}
       <style>{`
         @keyframes fadeIn {

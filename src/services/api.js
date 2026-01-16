@@ -238,9 +238,13 @@ export const alertesAPI = {
 // --- Nouvel export : API Bornes (conforme au schéma Mongoose fourni) ---
 export const bornesAPI = {
   list: (params) => api.get("/bornes", { params }).then(r => r.data),
+  
   get: (id) => api.get(`/bornes/${id}`).then(r => r.data),
+  
   create: (payload) => api.post("/bornes", payload).then(r => r.data),
+  
   update: (id, payload) => api.put(`/bornes/${id}`, payload).then(r => r.data),
+  
   remove: (id) => api.delete(`/bornes/${id}`).then(r => r.data),
 };
 
