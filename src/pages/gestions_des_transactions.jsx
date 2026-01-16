@@ -181,7 +181,7 @@ function TransactionTable({ transactions }) {
                       {transaction.forfaitName || renderForfaitLabel(transaction.forfait)}
                     </span>
                   </td>
-                  <td className="px-2 md:px-3 py-2 align-middle text-gray-700 font-bold text-green-600 whitespace-nowrap text-right">
+                  <td className="px-2 md:px-3 py-2 align-middle font-bold text-green-600 whitespace-nowrap text-right">
                     {Number(transaction.amount || 0).toLocaleString("fr-FR")} FCFA
                   </td>
                 </tr>
