@@ -125,7 +125,7 @@ export default function App() {
 
   return (
     <Navbar>
-      <main className="max-w-7xl mx-auto px-6 py-8" style={{ transform: "none", perspective: "none" }}>
+      <main className="max-w-7xl mx-auto px-6 pt-28 pb-2" style={{ transform: "none", perspective: "none" }}>
         {/* Contenu sans fond blanc (transparent) */}
         <div className="space-y-6">
           {/* Ligne haute : filtre état (bouton Valider supprimé) */}
