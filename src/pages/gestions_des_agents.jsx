@@ -919,7 +919,7 @@ function AgentTable({ agents, onEdit, onDelete }) {
                       </span>
                     </td>
                     <td className="px-4 md:px-5 py-3.5 align-middle">
-                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                      <div className="flex items-center justify-center gap-2 flex-nowrap">
                         <button
                           onClick={() => requestEdit(actualIndex)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 font-semibold hover:bg-blue-100 active:scale-95 transition-all text-xs whitespace-nowrap border border-blue-200 hover:border-blue-300 shadow-sm hover:shadow-md button-hover"
@@ -1157,7 +1157,7 @@ export default function GestionDesAgents() {
   return (
     <Navbar>
       {/* main sans pt-20, le Navbar gère son propre spacing */}
-      <main className="max-w-7xl mx-auto px-6 py-8 font-sans antialiased text-gray-800">
+      <main className="max-w-7xl mx-auto px-6 py-8 font-sans antialiased text-gray-800 pt-20">
         <section>
           {/* Formulaire de création */}
           <AgentForm onAddAgent={handleAddAgent} regions={regions} />

@@ -803,7 +803,7 @@ export default function Statistiques() {
 
   return (
     <Navbar>
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6 font-sans antialiased text-gray-800">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 font-sans antialiased text-gray-800 pt-32 pb-2">
         <section>
           {/* Sélecteur de date + export */}
           <DateSelector

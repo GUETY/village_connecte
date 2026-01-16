@@ -183,8 +183,13 @@ export default function Navbar({ children }) {
 
       {/* Ajouter margin-left au conteneur principal pour ne pas superposer le contenu */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? "ml-72" : "ml-24"}`}>
-        <Header />
+        <Header sidebarOpen={sidebarOpen} />
         <main className="p-8 pt-6">{children}</main>
+      </div>
+
+      {/* Barre supérieure fixe (z-index 50) */}
+      <div className="fixed top-0 left-0 w-full z-50 bg-[#ff7a00]">
+        {/* ...contenu de la barre... */}
       </div>
     </div>
   );
