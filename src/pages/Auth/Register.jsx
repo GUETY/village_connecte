@@ -91,7 +91,7 @@ export default function Register() {
           {/* Password */}
           <div className="flex items-center justify-between mb-6">
             <label className="text-gray-800 font-semibold w-1/3 text-lg">
-              Mot de passe
+              Nouveau mot de passe
             </label>
             <input
               type="password"
@@ -105,7 +105,7 @@ export default function Register() {
           {/* Confirm Password */}
           <div className="flex items-center justify-between mb-8">
             <label className="text-gray-800 font-semibold w-1/3 text-lg">
-              Confirmer
+              Confirmer le nouveau mot de passe
             </label>
             <input
               type="password"
@@ -128,7 +128,7 @@ export default function Register() {
               type="submit"
               className="bg-orange-400 hover:bg-orange-500 text-white font-semibold py-2.5 px-6 rounded-md transition duration-300 text-lg"
             >
-              S'enregistré
+              Modifier
             </button>
           </div>
         </form>

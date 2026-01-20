@@ -40,7 +40,7 @@ export default function Header({ sidebarOpen }) {
   return (
     <header
       className={
-        "fixed top-0 z-40 header-bg transition-all duration-300 " +
+        "fixed top-0 z-40 header-bg transition-all duration-300 font-sans antialiased text-gray-800 " +
         (sidebarOpen
           ? "left-64 w-[calc(100%-16rem)]"
           : "left-20 w-[calc(100%-5rem)]")

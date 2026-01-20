@@ -566,7 +566,7 @@ export default function CreationDeGroupeEtDeLogin() {
         )}
 
         <div
-          className="min-h-screen px-4 sm:px-6 lg:px-10 pb-10 bg-white transition-all duration-300 overflow-x-hidden"
+          className="min-h-screen px-4 sm:px-6 lg:px-10 pb-10 bg-white transition-all duration-300 overflow-x-hidden font-sans antialiased text-gray-800"
           style={{ paddingTop: "var(--vc-header-height, 64px)" }}
         >
           <div className="w-full max-w-[1200px] mx-auto pt-6">

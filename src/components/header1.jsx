@@ -62,7 +62,7 @@ export default function Header({ sidebarOpen }) {
     <header
       role="banner"
       aria-label="Barre supérieure du tableau de bord Villages Connectés"
-      className={`fixed top-0 z-40 text-white h-[4.6rem] flex items-center justify-between px-8 transition-all duration-300`}
+      className={`fixed top-0 z-40 text-white h-[4.6rem] flex items-center justify-between px-8 transition-all duration-300 font-sans antialiased`}
       style={{
         left: sidebarOpen ? "18rem" : "6rem",
         right: 0,

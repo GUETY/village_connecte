@@ -1,10 +1,11 @@
 // src/pages/Dashboard/Accueil.jsx
 import React, { useState, useEffect, useMemo } from "react";
-import { Users, BarChart3, Wifi, AlertCircle } from "lucide-react";
+import { Users, BarChart3, Wifi, AlertCircle, BarChart3 as BarChartIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import Navbar1 from "../../components/navbar1.jsx";
 import { usersAPI, alertesAPI, bornesAPI, transactionsAPI } from "../../services/api";
+import Chart from "react-apexcharts";
 
 function Card({ color = "purple", icon, children, onClick }) {
   const bgMap = {
@@ -110,10 +111,11 @@ function MiniLineChart({ data = [] }) {
       {/* Courbe */}
       <polyline
         fill="none"
-        stroke="#9b4dff"
+        stroke="#ff9500"
         strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
+        strokeDasharray="8,6"
         points={points.map((p) => `${p.x},${p.y}`).join(" ")}
       />
 
@@ -125,7 +127,7 @@ function MiniLineChart({ data = [] }) {
           cy={p.y}
           r={5}
           fill="#fff"
-          stroke="#9b4dff"
+          stroke="#ff9500"
           strokeWidth="3"
           onMouseEnter={() => setHover(p)}
           onMouseLeave={() => setHover(null)}
@@ -143,7 +145,7 @@ function MiniLineChart({ data = [] }) {
             height="34"
             rx="6"
             fill="white"
-            stroke="#c6b4ff"
+            stroke="#ffcc99"
           />
           <text
             x={hover.x}
@@ -160,7 +162,7 @@ function MiniLineChart({ data = [] }) {
             y={hover.y - 14}
             fontSize="11"
             textAnchor="middle"
-            fill="#7e22ce"
+            fill="#ff9500"
             fontWeight="bold"
           >
             users: {hover.v}
@@ -230,6 +232,73 @@ export default function Accueil() {
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [statPeriodFilter, setStatPeriodFilter] = useState("tous"); // filtre, 1m, tous
+  
+  // État pour le mois courant du graphique (année, mois) - initialisé au mois actuel
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+  
+  // Fonction pour générer les jours d'un mois donné
+  const generateTimelineDaysForMonth = (year, month) => {
+    const startDate = new Date(year, month, 1);
+    const endDate = new Date(year, month + 1, 1); // Dernier jour du mois + 1
+    const days = [];
+    const cursor = new Date(startDate);
+    
+    while (cursor < endDate) {
+      days.push({
+        year: cursor.getFullYear(),
+        month: cursor.getMonth(),
+        day: cursor.getDate(),
+        label: cursor.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: '2-digit' })
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return days;
+  };
+  
+  // Timeline calendrier: tous les jours du mois sélectionné
+  const timelineDays = generateTimelineDaysForMonth(selectedMonth.year, selectedMonth.month);
+  
+  // Formater le titre du mois
+  const monthTitle = new Date(selectedMonth.year, selectedMonth.month, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  
+  const [timeRangeStart, setTimeRangeStart] = useState(0);
+  const [timeRangeEnd, setTimeRangeEnd] = useState(100);
+  const [isDraggingStart, setIsDraggingStart] = useState(false);
+  const [isDraggingEnd, setIsDraggingEnd] = useState(false);
+  
+  // État pour les données du graphique temps réel (déplacé avant fetchChartData)
+  const [chartData, setChartData] = useState([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  
+  // Fonction pour obtenir le jour à partir d'un pourcentage
+  const getDayFromPercentage = (percentage) => {
+    const index = Math.floor((percentage / 100) * (timelineDays.length - 1));
+    return timelineDays[Math.max(0, Math.min(timelineDays.length - 1, index))];
+  };
+
+  // Helpers d'index/percentage sur la timeline (jours)
+  const getIndexFromPercentage = (percentage) => {
+    return Math.floor((percentage / 100) * (timelineDays.length - 1));
+  };
+
+  const getPercentageFromIndex = (index) => {
+    return (index / (timelineDays.length - 1)) * 100;
+  };
+
+  const getPercentageForYearMonthDay = (year, month, day) => {
+    const idx = timelineDays.findIndex((d) => d.year === year && d.month === month && d.day === day);
+    return idx >= 0 ? getPercentageFromIndex(idx) : 0;
+  };
+
+  // Revenir rapidement au mois courant
+  const goToCurrentMonth = () => {
+    const now = new Date();
+    setSelectedMonth({ year: now.getFullYear(), month: now.getMonth() });
+  };
 
   // helper to convert possible object fields to readable text
   const toText = (v) => {
@@ -244,6 +313,195 @@ export default function Accueil() {
     return () => clearInterval(t);
   }, []);
 
+  // Initialiser la plage au 1 janvier (début du calendrier)
+  useEffect(() => {
+    const startIdxDefault = 0; // 1 janvier
+    const daysWindow = statPeriodFilter === "tous" ? timelineDays.length - 1 : 10;
+    const endIdxDefault = Math.min(timelineDays.length - 1, startIdxDefault + daysWindow);
+    setTimeRangeStart(getPercentageFromIndex(startIdxDefault));
+    setTimeRangeEnd(getPercentageFromIndex(endIdxDefault));
+  // exécuter au montage et si le filtre change
+  }, [statPeriodFilter, timelineDays.length]);
+
+  // Étiquettes X dynamiques en fonction de la plage sélectionnée
+  const startIdx = React.useMemo(() => getIndexFromPercentage(timeRangeStart), [timeRangeStart]);
+  const endIdx = React.useMemo(() => getIndexFromPercentage(timeRangeEnd), [timeRangeEnd]);
+  const xTickLabels = React.useMemo(() => {
+    const count = 6;
+    const span = Math.max(1, endIdx - startIdx);
+    const step = span / (count - 1);
+    return Array.from({ length: count }, (_, i) => {
+      const idx = Math.round(startIdx + step * i);
+      const clamped = Math.max(0, Math.min(timelineDays.length - 1, idx));
+      return timelineDays[clamped].label;
+    });
+  }, [startIdx, endIdx, timelineDays]);
+
+  // Pas de mise à jour "temps réel" nécessaire : calendrier fixe 1 jan - 1 fév
+  // (on pourrait ajouter un polling si on veut suivre le jour courant, mais la plage est statique)
+
+  // Fonction pour charger les stats des personnes connectées par jour
+  const fetchChartData = async () => {
+    try {
+      setChartLoading(true);
+      // Créer les dates de début et fin du mois sélectionné
+      const start = new Date(selectedMonth.year, selectedMonth.month, 1);
+      const end = new Date(selectedMonth.year, selectedMonth.month + 1, 1);
+      
+      // Récupérer toutes les transactions/inscriptions entre les dates
+      const res = await transactionsAPI.list({ 
+        from: start.toISOString(), 
+        to: end.toISOString() 
+      });
+      const items = Array.isArray(res) ? res : res?.data || [];
+      
+      // Agréger par jour : compter les utilisateurs uniques par jour et mémoriser l'heure la plus récente
+      const dayMap = new Map();
+      const dayLastTime = new Map();
+      
+      timelineDays.forEach(day => {
+        const key = `${day.year}-${String(day.month + 1).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
+        dayMap.set(key, new Set());
+        dayLastTime.set(key, null);
+      });
+      
+      items.forEach((it) => {
+        const d = new Date(it.date || it.createdAt || it.timestamp);
+        if (isNaN(d)) return;
+        
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const user = it.userLogin || it.user || it.login || it._id || JSON.stringify(it);
+        
+        if (dayMap.has(key) && user) {
+          dayMap.get(key).add(String(user));
+          const prev = dayLastTime.get(key);
+          if (!prev || d > prev) {
+            dayLastTime.set(key, d);
+          }
+        }
+      });
+      
+      // Convertir en série de données pour ApexCharts
+      const seriesData = timelineDays.map((day, index) => {
+        const key = `${day.year}-${String(day.month + 1).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
+        const count = dayMap.get(key)?.size || 0;
+        const lastTime = dayLastTime.get(key);
+        return {
+          x: new Date(day.year, day.month, day.day).getTime(),
+          y: count,
+          label: day.label,
+          timeLabel: lastTime ? lastTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Heure inconnue',
+          lastTimestamp: lastTime ? lastTime.getTime() : null
+        };
+      });
+      
+      setChartData(seriesData);
+    } catch (err) {
+      console.warn('Could not load chart data:', err);
+      setChartData([]);
+    } finally {
+      setChartLoading(false);
+    }
+  };
+
+  // Polling : Rafraîchir les données toutes les 10 secondes
+  useEffect(() => {
+    fetchChartData(); // Charger immédiatement
+    const interval = setInterval(fetchChartData, 10000); // Toutes les 10s
+    return () => clearInterval(interval);
+  }, [selectedMonth]);
+
+  // Polling spécifique : aucun pour l'instant
+
+  // Configuration ApexCharts pour le graphique principal
+  const chartOptions = {
+    chart: {
+      id: 'main-chart',
+      type: 'area',
+      height: 320,
+      toolbar: { show: false },
+      zoom: { enabled: false },
+      animations: { enabled: true, easing: 'easeinout', speed: 800 }
+    },
+    colors: ['#ea580c'],
+    dataLabels: { enabled: false },
+    stroke: { curve: 'smooth', width: 3 },
+    fill: {
+      type: 'gradient',
+      gradient: {
+        shadeIntensity: 1,
+        opacityFrom: 0.4,
+        opacityTo: 0.1,
+        stops: [0, 90, 100]
+      }
+    },
+    xaxis: {
+      type: 'datetime',
+      labels: {
+        datetimeFormatter: {
+          year: 'yyyy',
+          month: 'MMM yy',
+          day: 'd MMM',
+          hour: 'HH:mm'
+        }
+      }
+    },
+    yaxis: {
+      title: { text: 'Personnes connectées' },
+      labels: {
+        formatter: (val) => Math.floor(val)
+      }
+    },
+    tooltip: {
+      x: { format: 'dd MMM yyyy' },
+      y: {
+        formatter: (val) => `${val} personne${val > 1 ? 's' : ''}`
+      },
+      custom: function({ series, seriesIndex, dataPointIndex, w }) {
+        const point = w?.globals?.initialSeries?.[seriesIndex]?.data?.[dataPointIndex];
+        const timeLabel = point?.timeLabel || 'Heure inconnue';
+        const dateLabel = point?.label || '';
+        const value = series?.[seriesIndex]?.[dataPointIndex] ?? 0;
+        return (
+          '<div class="apex-tooltip px-3 py-2 text-sm">'
+          + `<div><strong>${dateLabel}</strong></div>`
+          + `<div>${value} personne${value > 1 ? 's' : ''}</div>`
+          + `<div>Heure: ${timeLabel}</div>`
+          + '</div>'
+        );
+      }
+    },
+    grid: {
+      borderColor: '#e5e5e5',
+      strokeDashArray: 4
+    }
+  };
+
+
+  // Si "Tous" est sélectionné, afficher le bilan total (un seul point)
+  const totalPersonnes = chartData.reduce((sum, item) => sum + item.y, 0);
+  const chartSeriesData = statPeriodFilter === "tous" && totalPersonnes > 0
+    ? [{
+        x: new Date(selectedMonth.year, selectedMonth.month, 15).getTime(),
+        y: totalPersonnes,
+        label: `Total: ${totalPersonnes} personne${totalPersonnes > 1 ? 's' : ''}`,
+        timeLabel: 'Total mensuel',
+        lastTimestamp: null
+      }]
+    : chartData;
+
+  // Statistiques d'en-tête pour l'historique
+  const lastConnectionLabel = React.useMemo(() => {
+    const withTime = chartData.filter((p) => typeof p.lastTimestamp === 'number');
+    if (!withTime.length) return '-';
+    const latest = withTime.reduce((acc, cur) => (cur.lastTimestamp > acc.lastTimestamp ? cur : acc), withTime[0]);
+    return `${latest.label} à ${latest.timeLabel}`;
+  }, [chartData]);
+
+  const chartSeries = [{
+    name: 'Personnes connectées',
+    data: chartSeriesData
+  }];
   const formattedTime = currentTime.toLocaleTimeString("fr-FR", {
     hour: "2-digit",
     minute: "2-digit",
@@ -481,11 +739,20 @@ export default function Accueil() {
     setUsersDeltaColor(color);
   }, [tableUsers, loadingUsers]);
 
+  // WebSocket pour les mises à jour en temps réel (désactivé pour le moment)
+  // useEffect(() => {
+  //   const ws = new WebSocket('ws://votre-serveur/stats');
+  //   ws.onmessage = (event) => setChartData(JSON.parse(event.data));
+  //   return () => {
+  //     ws.close();
+  //   };
+  // }, []);
+
   return (
     <ErrorBoundary>
       <Navbar1 onSidebarToggle={(isOpen) => setSidebarOpen(isOpen)}>
         <div
-          className="min-h-screen px-4 sm:px-6 lg:px-10 pb-10 bg-[var(--vc-bg,#f6f5fb)] transition-all duration-300 overflow-x-hidden"
+          className="min-h-screen px-4 sm:px-6 lg:px-10 pb-10 bg-[var(--vc-bg,#f6f5fb)] transition-all duration-300 overflow-x-hidden font-sans antialiased text-gray-800"
           style={{ paddingTop: "var(--vc-header-height, 64px)" }}
         >
           <div className="max-w-[1200px] mx-auto pt-6">
@@ -516,7 +783,7 @@ export default function Accueil() {
             {/* --- LES 4 CARTES --- */}
             <div className="mt-6 bg-white rounded-lg shadow-sm p-4 sm:p-6 transition-all duration-300">
               <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6">
-                <Card color="purple" icon={<Users size={24} />}>
+                <Card color="purple" icon={<Users size={24} />} onClick={() => navigate('/users')}>
                   <div className="text-base sm:text-lg font-medium text-gray-700">Utilisateurs connectés</div>
                   <div className="text-xl sm:text-2xl font-bold text-gray-800">{loadingUsers ? "..." : tableUsers.length}</div>
                   <div className={`text-sm sm:text-lg font-medium ${usersDeltaColor}`}>{usersDeltaLabel}</div>
@@ -528,34 +795,134 @@ export default function Accueil() {
                   <div className="text-xs sm:text-sm text-gray-500">Volume total de données consommées aujourd'hui</div>
                 </Card>
 
-                <Card color="green" icon={<Wifi size={24} />}>
+                <Card color="green" icon={<Wifi size={24} />} onClick={() => navigate('/gestion-des-bornes-wifi')}>
                   <div className="text-base sm:text-lg font-medium text-gray-700">Bornes actives</div>
                   <div className="text-xl sm:text-2xl font-bold text-green-700">{bornesActive}/{bornesTotal}</div>
                   <div className="text-xs sm:text-sm text-orange-500">{bornesAlert}</div>
                 </Card>
 
-                <Card color="orange" icon={<AlertCircle size={24} />}>
+                <Card color="orange" icon={<AlertCircle size={24} />} onClick={() => navigate('/consultation-des-alertes')}>
                   <div className="text-base sm:text-lg font-medium text-gray-700">Alertes actives</div>
                   <div className="text-xl sm:text-2xl font-bold text-gray-800">{activeAlertsCount}</div>
                   <div className="text-xs sm:text-sm text-orange-600">{toTreatCount} à traiter</div>
                 </Card>
               </section>
-              {/* --- GRAPHIQUE + TABLEAU --- */}
-              <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                <div 
-                  onClick={() => navigate('/statistiques')}
-                  className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-purple-50 hover:shadow-lg transition-shadow duration-200 overflow-x-auto cursor-pointer"
-                >
-                  <h3 className="text-purple-700 font-semibold mb-4 text-base sm:text-lg">
-                    Historique journalier des connexions
-                  </h3>
+              {/* --- HISTORIQUE JOURNALIER DE CONNEXION --- */}
+              <section className="rounded-lg shadow-md p-4 sm:p-6 border border-blue-100 bg-white mt-6">
+                <h2 className="text-blue-700 font-semibold mb-6 text-lg sm:text-xl">
+                  Historique journalier de connexion
+                </h2>
 
-                  <div className="w-full h-64 sm:h-72 flex items-center justify-center min-w-full">
-                    <MiniLineChart data={seriesData.length ? seriesData : series} />
+                {/* Statistiques de synthèse */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-5">
+                  <div className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                    <div className="text-xs font-medium text-gray-500">Mois affiché</div>
+                    <div className="text-lg font-semibold text-gray-900 capitalize">{monthTitle}</div>
+                  </div>
+                  <div className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                    <div className="text-xs font-medium text-gray-500">Total connexions (mois)</div>
+                    <div className="text-lg font-semibold text-gray-900">{totalPersonnes}</div>
+                  </div>
+                  <div className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                    <div className="text-xs font-medium text-gray-500">Dernière connexion connue</div>
+                    <div className="text-sm font-semibold text-gray-900">{lastConnectionLabel}</div>
                   </div>
                 </div>
 
-                {/* Tableau Utilisateurs*/}
+                {/* Filtre de période */}
+                <div className="flex gap-2 mb-6 items-center flex-wrap">
+                  <span className="px-3 py-1 text-xs font-medium text-gray-600 border-b-2 border-transparent">
+                    Filtre
+                  </span>
+                  <button 
+                    onClick={() => setStatPeriodFilter("1m")}
+                    className={`px-3 py-1 text-xs font-medium border-b-2 transition-colors ${
+                      statPeriodFilter === "1m" 
+                        ? "text-gray-900 border-gray-900 font-bold" 
+                        : "text-gray-600 border-transparent hover:text-gray-900 hover:border-blue-500"
+                    }`}
+                  >
+                    1m
+                  </button>
+                  <button 
+                    onClick={() => setStatPeriodFilter("tous")}
+                    className={`px-3 py-1 text-xs font-medium border-b-2 transition-colors ${
+                      statPeriodFilter === "tous" 
+                        ? "text-gray-900 border-gray-900 font-bold" 
+                        : "text-gray-600 border-transparent hover:text-gray-900 hover:border-blue-500"
+                    }`}
+                  >
+                    Tous
+                  </button>
+                  
+                  {/* Séparateur */}
+                  <div className="w-px h-6 bg-gray-300 mx-2"></div>
+
+                  <button
+                    onClick={goToCurrentMonth}
+                    className="px-3 py-1 text-xs font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                  >
+                    Mois courant
+                  </button>
+                  
+                  {/* Navigation par mois */}
+                  <button
+                    onClick={() => {
+                      const newMonth = selectedMonth.month === 0 ? 11 : selectedMonth.month - 1;
+                      const newYear = selectedMonth.month === 0 ? selectedMonth.year - 1 : selectedMonth.year;
+                      setSelectedMonth({ year: newYear, month: newMonth });
+                    }}
+                    className="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors text-sm font-medium"
+                    title="Mois précédent"
+                  >
+                    ◄
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      const newMonth = selectedMonth.month === 11 ? 0 : selectedMonth.month + 1;
+                      const newYear = selectedMonth.month === 11 ? selectedMonth.year + 1 : selectedMonth.year;
+                      setSelectedMonth({ year: newYear, month: newMonth });
+                    }}
+                    className="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors text-sm font-medium"
+                    title="Mois suivant"
+                  >
+                    ►
+                  </button>
+                </div>
+
+                {/* Graphique ApexCharts avec brush */}
+                <div className="w-full rounded border border-gray-200 mb-4 bg-white">
+                  {chartLoading ? (
+                    <div className="h-80 flex items-center justify-center">
+                      <div className="text-gray-500">Chargement des données...</div>
+                    </div>
+                  ) : chartSeriesData.length === 0 ? (
+                    <div className="h-80 flex flex-col items-center justify-center text-gray-500">
+                      <div className="text-sm font-medium">Aucune donnée disponible pour ce mois.</div>
+                      <div className="text-xs">Essayez un autre mois ou vérifiez les connexions.</div>
+                    </div>
+                  ) : (
+                    <Chart
+                      options={chartOptions}
+                      series={chartSeries}
+                      type="area"
+                      height={320}
+                    />
+                  )}
+                </div>
+
+                {/* Légende */}
+                <div className="flex flex-wrap gap-6 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded bg-orange-600"></span>
+                    <span className="text-sm font-medium text-gray-700">Personne connecté</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* --- TABLEAU UTILISATEURS --- */}
+              <section className="grid grid-cols-1 gap-4 sm:gap-6 mt-6">
                 <div 
                   onClick={() => navigate('/groupe-login')}
                   className="rounded-lg shadow-md p-4 sm:p-6 border border-purple-100 bg-white hover:shadow-lg transition-shadow duration-200 cursor-pointer"
@@ -564,7 +931,7 @@ export default function Accueil() {
                     Gestion des accès - Utilisateurs connectés
                   </h3>
 
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto overflow-y-auto max-h-64 sm:max-h-72">
                     <table className="min-w-full text-xs sm:text-sm">
                       <thead>
                         <tr className="bg-purple-100 text-purple-700 border border-purple-200">

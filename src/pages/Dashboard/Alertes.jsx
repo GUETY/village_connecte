@@ -166,7 +166,7 @@ export default function GestionDesAlertes() {
     <Navbar1 onSidebarToggle={(isOpen) => setSidebarOpen(isOpen)}>
       {/* Main wrapper: header est fixe — on ajoute un padding-top depuis la variable CSS fournie par Navbar1 */}
       <div
-        className="min-h-screen px-4 sm:px-6 lg:px-10 pb-10 bg-gray-50 transition-all duration-300 overflow-x-hidden"
+        className="min-h-screen px-4 sm:px-6 lg:px-10 pb-10 bg-gray-50 transition-all duration-300 overflow-x-hidden font-sans antialiased text-gray-800"
         style={{ paddingTop: "var(--vc-header-height, 64px)" }}
       >
         {/* Top right : Identifiant / Date */}

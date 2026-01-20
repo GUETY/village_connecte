@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { agentsAPI, groupsAPI } from "../../services/api";
+import api, { userAccessAPI, forfaitAPI } from "../../services/api";
 import Navbar from "../../components/navbar1.jsx";
+import { RefreshCw } from "lucide-react";
 
 export default function GestionDesAccesUtilisateurs() {
-  const [loginSelection, setLoginSelection] = useState("");
-  const [groupSelection, setGroupSelection] = useState("");
-  const [loginRadio, setLoginRadio] = useState("");
-  const [selectAll, setSelectAll] = useState(false);
+  const [filterUserId, setFilterUserId] = useState("");
+  const [filterGroup, setFilterGroup] = useState("");
+  const [filterStatus, setFilterStatus] = useState("Tous");
+  
+  const [accesses, setAccesses] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [sourceLabel, setSourceLabel] = useState("");
 
-  // === Période globale ===
-  const [periodStart, setPeriodStart] = useState("");
-  const [periodEnd, setPeriodEnd] = useState("");
   // Toast d'information animé
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -23,175 +24,346 @@ export default function GestionDesAccesUtilisateurs() {
     setTimeout(() => setToastVisible(false), ms);
   };
 
-  // horaires / durée / priorité
-  const [timeStart, setTimeStart] = useState("");
-  const [timeEnd, setTimeEnd] = useState("");
-  const [durationValue, setDurationValue] = useState("");
-  const [priorityValue, setPriorityValue] = useState("");
+  // Colonnes désirées (fixes) avec correspondances possibles (inclut clés imbriquées)
+  const desiredColumns = [
+    {
+      key: "purchasePrice",
+      label: "Prix d’achat",
+      candidates: [
+        "purchasePrice",
+        "price",
+        "prixAchat",
+        "prix_achat",
+        "cost",
+        "montant",
+        "amount",
+        "tarif",
+        "prix",
+        "total",
+        "transaction.amount",
+        "purchase.amount"
+      ]
+    },
+    {
+      key: "name",
+      label: "Nom",
+      candidates: [
+        "name",
+        "nom",
+        "productName",
+        "itemName",
+        "designation",
+        "libelle",
+        "label",
+        "title",
+        "user",
+        "login",
+        "article",
+        "produit",
+        "produit.name",
+        "product.name",
+        "item.name",
+        "article.name",
+        "article.nom"
+      ]
+    },
+    {
+      key: "code",
+      label: "Code",
+      candidates: [
+        "code",
+        "sku",
+        "ref",
+        "reference",
+        "productCode",
+        "codeProduit",
+        "id",
+        "_id",
+        "produit.code",
+        "product.code",
+        "item.code"
+      ]
+    },
+    {
+      key: "usage",
+      label: "Utilisation",
+      candidates: [
+        "usage",
+        "utilisation",
+        "use",
+        "purpose",
+        "type",
+        "category",
+        "categorie",
+        "mode",
+        "modeUtilisation"
+      ]
+    },
+    {
+      key: "purchaseDate",
+      label: "Date d’achat",
+      candidates: [
+        "purchaseDate",
+        "dateAchat",
+        "date",
+        "createdAt",
+        "purchase.date",
+        "transactionDate",
+        "date_achat"
+      ]
+    },
+    {
+      key: "purchaseTime",
+      label: "Heure d’achat",
+      candidates: [
+        "purchaseTime",
+        "heureAchat",
+        "time",
+        "createdAt",
+        "purchase.time"
+      ]
+    },
+    { key: "status", label: "Statut", candidates: ["status","etat","state"] },
+    { key: "actions", label: "Actions", candidates: [] }, // Colonne dédiée pour les actions
+  ];
 
-  // QUOTAS
-  const [quotaValue, setQuotaValue] = useState("");
-  const [speedValue, setSpeedValue] = useState("");
-
-  // TABLEAU
-  const [rows, setRows] = useState(
-    Array.from({ length: 10 }).map((_, i) => ({
-      id: i + 1,
-      startDate: "",
-      endDate: "",
-      startTime: "",
-      endTime: "",
-      duration: "",
-      periodic: false,
-      quota: "",
-      speed: "",
-      priority: "",
-      selected: false,
-    }))
-  );
-
-  // === Sélection globale ===
-  const toggleSelectAll = () => {
-    const newState = !selectAll;
-    setSelectAll(newState);
-    setRows((prev) => prev.map((r) => ({ ...r, selected: newState })));
+  // Helper: récupérer première valeur correspondante (supporte clés imbriquées via "a.b.c")
+  const getByPath = (obj, path) => {
+    try {
+      return String(path)
+        .split(".")
+        .reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj);
+    } catch {
+      return undefined;
+    }
   };
 
-  const toggleRow = (index, value) => {
-    const updated = [...rows];
-    updated[index].selected = value;
-
-    if (!value) setSelectAll(false);
-    else if (updated.every((r) => r.selected)) setSelectAll(true);
-
-    setRows(updated);
+  const getField = (obj, keys) => {
+    for (const k of keys) {
+      const val = getByPath(obj, k);
+      if (val !== undefined && val !== null) return val;
+    }
+    return "";
   };
 
-  // === Load users + groups ===
-  const [availableLogins, setAvailableLogins] = useState([]);
-  const [availableGroups, setAvailableGroups] = useState([]);
+  const formatValue = (v) => {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "string") {
+      if (/^\d{4}-\d{2}-\d{2}T/.test(v)) {
+        const d = new Date(v);
+        if (!isNaN(d)) return d.toLocaleString("fr-FR");
+      }
+      return v;
+    }
+    if (typeof v === "number" || typeof v === "boolean") return String(v);
+    if (typeof v === "object") {
+      if (v.startHour || v.endHour) {
+        const s = v.startHour ? String(v.startHour) : "";
+        const e = v.endHour ? String(v.endHour) : "";
+        return [s, e].filter(Boolean).join(" → ");
+      }
+      if (v.type && ("startDate" in v || "endDate" in v)) {
+        const sd = v.startDate ? new Date(v.startDate) : null;
+        const ed = v.endDate ? new Date(v.endDate) : null;
+        const sdStr = sd && !isNaN(sd) ? sd.toLocaleDateString("fr-FR") : "";
+        const edStr = ed && !isNaN(ed) ? ed.toLocaleDateString("fr-FR") : "";
+        const range = (sdStr || edStr) ? ` (${sdStr}${sdStr && edStr ? ' → ' : ''}${edStr})` : "";
+        return `${String(v.type)}${range}`;
+      }
+      if (v.name && v._id) return `${v.name} (${v._id})`;
+      if (v.name) return String(v.name);
+      if (v._id) return String(v._id);
+      try { return JSON.stringify(v); } catch { return String(v); }
+    }
+    return String(v);
+  };
+
+  const getDatePart = (v) => {
+    if (!v) return "";
+    const d = typeof v === "string" || typeof v === "number" ? new Date(v) : v;
+    return isNaN(d) ? formatValue(v) : d.toLocaleDateString("fr-FR");
+  };
+
+  const getTimePart = (v) => {
+    if (!v) return "";
+    const d = typeof v === "string" || typeof v === "number" ? new Date(v) : v;
+    return isNaN(d) ? formatValue(v) : d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  };
+
+  const displayValue = (item, col) => {
+    const raw = getField(item, col.candidates);
+    if (col.key === "purchaseDate") return getDatePart(raw);
+    if (col.key === "purchaseTime") return getTimePart(raw);
+    // Prix: si nombre, format local
+    if (col.key === "purchasePrice" && typeof raw === "number") return raw.toLocaleString("fr-FR") + " fcfa";
+    return formatValue(raw);
+  };
+
+  // Harmonisation: classes par type de colonne pour un rendu professionnel
+  const headerClass = (key) => {
+    const base = "py-3 font-semibold whitespace-nowrap sticky top-0 z-10 align-middle bg-orange-500";
+    if (key === "purchasePrice") return `px-4 ${base} text-left w-[120px]`;
+    if (key === "name") return `px-4 ${base} text-center`;
+    if (key === "code") return `pl-20 pr-4 ${base} text-left min-w-[160px]`;
+    if (key === "actions") return `px-4 ${base} text-center min-w-[210px]`;
+    return `px-4 ${base} text-left`;
+  };
+
+  const cellClass = (key) => {
+    if (key === "purchasePrice") return "px-4 py-3 text-gray-700 text-xs text-left tabular-nums w-[120px] align-middle";
+    if (key === "purchaseDate" || key === "purchaseTime") return "px-4 py-3 text-gray-700 text-xs whitespace-nowrap";
+    if (key === "name") return "px-4 py-3 text-gray-700 text-xs truncate max-w-[220px]";
+    if (key === "code") return "px-4 py-3 text-gray-700 text-xs min-w-[160px] font-mono text-[11px]";
+    if (key === "actions") return "px-4 py-3 text-xs min-w-[210px]";
+    return "px-4 py-3 text-gray-700 text-xs";
+  };
+
+  // Charger les données depuis la base avec fallback d'endpoints
+  const loadAccesses = async () => {
+    setLoading(true);
+    try {
+      const attempts = [
+        { fn: () => forfaitAPI.list(), source: "/forfaits" },
+        { fn: () => userAccessAPI.list(), source: "/user-access" },
+        { fn: () => api.get("/historique/achats").then(r => r.data), source: "/historique/achats" },
+      ];
+
+      let records = [];
+      let usedSource = "";
+      for (const a of attempts) {
+        try {
+          const res = await a.fn();
+          records = Array.isArray(res) ? res : res?.data || [];
+          usedSource = a.source;
+          // accepter le premier endpoint qui répond (même si liste vide)
+          break;
+        } catch (e) {
+          // essayer le suivant
+        }
+      }
+
+      setAccesses(records);
+      setSourceLabel(usedSource || "");
+      showToast("Données actualisées");
+    } catch (err) {
+      console.error("Erreur lors du chargement des accès:", err);
+      showToast("Erreur lors du chargement", true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [uRes, gRes] = await Promise.allSettled([
-          agentsAPI.list(),
-          groupsAPI.list()
-        ]);
-        
-        if (uRes.status === "fulfilled") {
-          const users = Array.isArray(uRes.value) ? uRes.value : uRes.value?.data || [];
-          setAvailableLogins(users.map((u) => u.login || u.name));
-        }
-        
-        if (gRes.status === "fulfilled") {
-          const groups = Array.isArray(gRes.value) ? gRes.value : gRes.value?.data || [];
-          setAvailableGroups(groups || []);
-        }
-      } catch (err) {
-        console.error("load users/groups:", err);
-      }
-    })();
+    loadAccesses();
   }, []);
 
-  // Charger les règles depuis la base quand on change le login/group sélectionné
-  useEffect(() => {
-    const ownerType = loginRadio === "login" ? "user" : loginRadio === "group" ? "group" : null;
-    const owner = ownerType === "user" ? loginSelection : ownerType === "group" ? groupSelection : null;
+  const handleActualiser = () => {
+    loadAccesses();
+  };
 
-    if (!ownerType || !owner) return; // rien à charger
-
-    (async () => {
-      try {
-        // TODO: Ajouter l'API pour récupérer les règles d'accès si disponible
-        // const res = await accessRulesAPI.list();
-        // Pour l'instant, nous utilisons une structure locale
-      } catch (err) {
-        console.error("load access rules error:", err);
-      }
-    })();
-  }, [loginRadio, loginSelection, groupSelection]);
-
-  // === Format date lisible ===
-  const formatDate = (d) => {
-    if (!d) return "";
+  // Actions par ligne: Bloquer / Activer / Renouveler
+  const updateRowStatusLocal = (row, newStatus) => {
     try {
-      return new Date(d).toLocaleDateString();
-    } catch {
-      return d;
-    }
+      setAccesses((prev) => prev.map((r) => {
+        const rid = r.id ?? r._id;
+        const rowId = row.id ?? row._id;
+        return rid && rowId ? (rid === rowId ? { ...r, status: newStatus } : r) : (r === row ? { ...r, status: newStatus } : r);
+      }));
+    } catch {}
   };
 
-  // === Vidage des champs après Valider ===
-  const resetLeftFields = () => {
-    setPeriodStart("");
-    setPeriodEnd("");
-    setTimeStart("");
-    setTimeEnd("");
-    setDurationValue("");
-    setPriorityValue("");
-    setQuotaValue("");
-    setSpeedValue("");
-  };
-
-  // === Application paramètres UNIQUEMENT quand on clique sur "Valider" ===
-  const applySettings = async () => {
-    // compute new rows first so we can send them to the server
-    const anySelected = rows.some((r) => r.selected);
-    const newRows = rows.map((row) => {
-      // If no row is selected, apply to all rows; otherwise only to selected rows
-      const shouldApply = anySelected ? row.selected : true;
-      if (!shouldApply) return row;
-      return {
-        ...row,
-        startDate: periodStart || row.startDate,
-        endDate: periodEnd || row.endDate,
-        startTime: timeStart || row.startTime,
-        endTime: timeEnd || row.endTime,
-        duration: durationValue || row.duration,
-        quota: quotaValue !== "" ? quotaValue : row.quota,
-        speed: speedValue !== "" ? speedValue : row.speed,
-        priority: priorityValue || row.priority,
-        periodic: !!(periodStart && periodEnd),
-        selected: true,
-      };
-    });
-
-    setRows(newRows);
-
-    // Prepare payload: owner is either selected login or selected group
-    const ownerType = loginRadio === "login" ? "user" : loginRadio === "group" ? "group" : null;
-    const owner = ownerType === "user" ? loginSelection : ownerType === "group" ? groupSelection : null;
-
-    // Only send if an owner is selected
-    if (ownerType && owner) {
-      const payload = {
-        ownerType,
-        owner,
-        rows: newRows.filter((r) => r.startDate || r.endDate || r.startTime || r.endTime || r.duration || r.quota || r.speed || r.priority),
-      };
-
-      console.debug("Saving access rules payload:", payload);
-
-      try {
-        // TODO: Implémenter l'API pour sauvegarder les règles d'accès
-        // const res = await accessRulesAPI.save(payload);
-        // show animated toast instead of alert
-        showToast("Enregistré");
-      } catch (err) {
-        console.error("save access rules error:", err);
-        showToast("Erreur lors de l'enregistrement des règles", true);
+  const persistStatusIfPossible = async (row, newStatus) => {
+    try {
+      const id = row.id ?? row._id;
+      if (!id) return;
+      if (sourceLabel === "/forfaits") {
+        await forfaitAPI.update(id, { status: newStatus });
       }
-    } else {
-      showToast("Aucun login ou groupe sélectionné — appliqué localement", true);
+    } catch (e) {
+      console.warn("Persist status failed", e);
+      showToast("Échec de la mise à jour du statut côté serveur", true);
     }
-
-    resetLeftFields();
   };
+
+  const handleBlock = async (row) => {
+    const status = "Suspendu";
+    updateRowStatusLocal(row, status);
+    showToast("Accès bloqué (statut: Suspendu)");
+    await persistStatusIfPossible(row, status);
+  };
+
+  const handleActivate = async (row) => {
+    const status = "Actif";
+    updateRowStatusLocal(row, status);
+    showToast("Accès activé (statut: Actif)");
+    await persistStatusIfPossible(row, status);
+  };
+
+  const handleRenew = async (row) => {
+    showToast("Renouvellement demandé");
+  };
+
+  
+
+  // Filtrer les accès (conserve les filtres existants)
+  const filteredAccesses = accesses.filter((item) => {
+    const priceVal = getField(item, [
+      "purchasePrice",
+      "price",
+      "prixAchat",
+      "prix_achat",
+      "cost",
+      "montant",
+      "amount",
+      "tarif",
+      "prix",
+      "total",
+      "transaction.amount",
+      "purchase.amount",
+    ]);
+
+    // Récupération de la date d'achat (clé imbriquée possible) et normalisation au format YYYY-MM-DD
+    const dateRaw = getField(item, [
+      "purchaseDate",
+      "dateAchat",
+      "date",
+      "createdAt",
+      "purchase.date",
+      "transactionDate",
+      "date_achat",
+    ]);
+    const normalizeYYYYMMDD = (v) => {
+      if (!v) return "";
+      const d = typeof v === "string" || typeof v === "number" ? new Date(v) : v;
+      return isNaN(d) ? "" : new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    };
+    const itemDate = normalizeYYYYMMDD(dateRaw);
+
+    const statusVal = getField(item, ["status","etat","state"]) || "";
+
+    const input = String(filterUserId || "").trim();
+    let matchPrice = true;
+    if (input) {
+      if (priceVal === undefined || priceVal === null) {
+        matchPrice = false;
+      } else {
+        const num = Number(input.replace(/\s/g, ""));
+        if (!isNaN(num) && typeof priceVal === "number") {
+          matchPrice = Number(priceVal) === num;
+        } else {
+          matchPrice = String(priceVal).toLowerCase().includes(input.toLowerCase());
+        }
+      }
+    }
+    // Filtre par date: si une date est saisie (format YYYY-MM-DD), comparer à la date normalisée
+    const matchDate = !filterGroup || (itemDate && itemDate === filterGroup);
+    const matchStatus = filterStatus === "Tous" || String(statusVal) === filterStatus;
+    return matchPrice && matchDate && matchStatus;
+  });
 
   return (
     <Navbar>
-      <div className="min-h-screen pt-28 pl-8 pr-4 bg-white w-full max-w-[3000px] mx-auto">
+      <div className="min-h-screen pt-20 pb-10 w-full bg-white font-sans antialiased text-gray-800">
         {/* Toast animé */}
         <div aria-live="polite" className="pointer-events-none fixed inset-0 flex items-start justify-end p-6 z-50">
           <div className="w-full flex flex-col items-end">
@@ -200,420 +372,102 @@ export default function GestionDesAccesUtilisateurs() {
             </div>
           </div>
         </div>
-        {/* SÉLECTEURS */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-10">
-            <div className="flex items-start gap-10">
-              {/* Login */}
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="relative flex h-4 w-4">
-                    <input
-                      type="radio"
-                      name="accessType"
-                      value="login"
-                      checked={loginRadio === "login"}
-                      onChange={() => setLoginRadio("login")}
-                      className="peer appearance-none h-4 w-4 rounded-full border-2 border-orange-500 cursor-pointer"
-                    />
-                    <span className="pointer-events-none absolute inset-0 hidden peer-checked:flex items-center justify-center">
-                      <span className="h-2 w-2 rounded-full bg-orange-500"></span>
-                    </span>
-                  </span>
-                  <span className="text-sm font-semibold">Login Utilisateur</span>
-                </label>
 
-                <select
-                  value={loginSelection}
-                  onChange={(e) => setLoginSelection(e.target.value)}
-                  disabled={loginRadio !== "login"}
-                  className="rounded-full border-2 border-orange-500 px-3 py-1.5 w-56 text-sm disabled:opacity-50"
-                >
-                  <option value="">-- choisir --</option>
-                  {availableLogins.map((l) => (
-                    <option key={l} value={l}>{l}</option>
-                  ))}
-                </select>
-              </div>
+        <div className="max-w-6xl mx-auto px-6">
+          {sourceLabel && (
+            <h1 className="text-3xl font-bold text-orange-600 text-center mb-8">Historique de Gestion des accès</h1>
+          )}
 
-              {/* Groupe */}
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="relative flex h-4 w-4">
-                    <input
-                      type="radio"
-                      name="accessType"
-                      value="group"
-                      checked={loginRadio === "group"}
-                      onChange={() => setLoginRadio("group")}
-                      className="peer appearance-none h-4 w-4 rounded-full border-2 border-orange-500 cursor-pointer"
-                    />
-                    <span className="pointer-events-none absolute inset-0 hidden peer-checked:flex items-center justify-center">
-                      <span className="h-2 w-2 rounded-full bg-orange-500"></span>
-                    </span>
-                  </span>
-                  <span className="text-sm font-semibold">Groupe utilisateur</span>
-                </label>
-
-                <select
-                  value={groupSelection}
-                  onChange={(e) => setGroupSelection(e.target.value)}
-                  disabled={loginRadio !== "group"}
-                  className="rounded-full border-2 border-orange-500 px-3 py-1.5 w-56 text-sm disabled:opacity-50"
-                >
-                  <option value="">-- choisir --</option>
-                  {availableGroups.map((g) => (
-                    <option key={g._id || g.id || g.name} value={g._id || g.id || g.name}>
-                      {g.name || g}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* GRILLE */}
-        <div className="grid grid-cols-12 gap-6">
-          
-          {/* === COLONNE GAUCHE === */}
-          <div className="col-span-4">
-            <div className="border-2 border-orange-500 rounded-lg p-3 text-sm w-[280px] space-y-3">
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <span className="relative flex h-4 w-4">
-                  <input type="radio" name="freq" className="peer appearance-none h-4 w-4 rounded-full border-2 border-orange-500 cursor-pointer"/>
-                  <span className="pointer-events-none absolute inset-0 hidden peer-checked:flex items-center justify-center">
-                    <span className="h-2 w-2 rounded-full bg-orange-500"></span>
-                  </span>
-                </span>
-                Chaque jour
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <span className="relative flex h-4 w-4">
-                  <input type="radio" name="freq" className="peer appearance-none h-4 w-4 rounded-full border-2 border-orange-500 cursor-pointer"/>
-                  <span className="pointer-events-none absolute inset-0 hidden peer-checked:flex items-center justify-center">
-                    <span className="h-2 w-2 rounded-full bg-orange-500"></span>
-                  </span>
-                </span>
-                Chaque semaine
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <span className="relative flex h-4 w-4">
-                  <input type="radio" name="freq" className="peer appearance-none h-4 w-4 rounded-full border-2 border-orange-500 cursor-pointer"/>
-                  <span className="pointer-events-none absolute inset-0 hidden peer-checked:flex items-center justify-center">
-                    <span className="h-2 w-2 rounded-full bg-orange-500"></span>
-                  </span>
-                </span>
-                Chaque mois
-              </label>
-
-              {/* PÉRIODE */}
-              <div className="flex items-start gap-2">
-                <span className="relative flex h-4 w-4 mt-1">
-                  <input type="radio" name="freq" className="peer appearance-none h-4 w-4 rounded-full border-2 border-orange-500 cursor-pointer"/>
-                  <span className="pointer-events-none absolute inset-0 hidden peer-checked:flex items-center justify-center">
-                    <span className="h-2 w-2 rounded-full bg-orange-500"></span>
-                  </span>
-                </span>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span>Période du</span>
-                    <input
-                      type="date"
-                      value={periodStart}
-                      onChange={(e) => setPeriodStart(e.target.value)}
-                      className="border border-orange-400 rounded px-2 py-1 w-[120px]"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 ml-[65px]">
-                    <span>au</span>
-                    <input
-                      type="date"
-                      value={periodEnd}
-                      onChange={(e) => setPeriodEnd(e.target.value)}
-                      className="border border-orange-400 rounded px-2 py-1 w-[120px]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* HORAIRE */}
-              <div className="flex items-start gap-2">
-                <span className="relative flex h-4 w-4 mt-1">
-                  <input type="radio" name="freq" className="peer appearance-none h-4 w-4 rounded-full border-2 border-orange-500 cursor-pointer"/>
-                  <span className="pointer-events-none absolute inset-0 hidden peer-checked:flex items-center justify-center">
-                    <span className="h-2 w-2 rounded-full bg-orange-500"></span>
-                  </span>
-                </span>
-
-                <div className="flex flex-col">
-                  <span>Définir horaire (24h) de</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <input
-                      type="time"
-                      value={timeStart}
-                      onChange={(e) => setTimeStart(e.target.value)}
-                      className="border border-orange-400 rounded px-2 py-1 w-[90px]"
-                    />
-                    <span>à</span>
-                    <input
-                      type="time"
-                      value={timeEnd}
-                      onChange={(e) => setTimeEnd(e.target.value)}
-                      className="border border-orange-400 rounded px-2 py-1 w-[90px]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* DURÉE */}
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-4 w-4">
-                  <input type="radio" name="freq" className="peer appearance-none h-4 w-4 rounded-full border-2 border-orange-500 cursor-pointer"/>
-                  <span className="pointer-events-none absolute inset-0 hidden peer-checked:flex items-center justify-center">
-                    <span className="h-2 w-2 rounded-full bg-orange-500"></span>
-                  </span>
-                </span>
-
-                <span>Durée (min)</span>
+          {/* SECTION FILTRAGE */}
+          <div className="border-4 border-orange-500 rounded-2xl bg-yellow-50 p-6 mb-6">
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-sm font-bold text-gray-700 block mb-2">FILTRER PAR PRIX D’ACHAT</label>
                 <input
                   type="number"
-                  value={durationValue}
-                  onChange={(e) => setDurationValue(e.target.value)}
-                  className="border border-orange-400 rounded px-2 py-1 w-[70px]"
+                  placeholder="Entrez un prix d’achat"
+                  value={filterUserId}
+                  onChange={(e) => setFilterUserId(e.target.value)}
+                  className="no-spin w-full border-2 border-orange-500 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
               </div>
 
-              {/* PRIORITÉ */}
-              <div className="flex items-center gap-5 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="relative flex h-4 w-4">
-                    <input
-                      type="radio"
-                      name="prio"
-                      value="prio"
-                      checked={priorityValue === "prio"}
-                      onChange={() => setPriorityValue("prio")}
-                      className="peer appearance-none h-4 w-4 rounded-full border-2 border-orange-500 cursor-pointer"
-                    />
-                    <span className="pointer-events-none absolute inset-0 hidden peer-checked:flex items-center justify-center">
-                      <span className="h-2 w-2 rounded-full bg-orange-500"></span>
-                    </span>
-                  </span>
-                  Priorité
-                </label>
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-sm font-bold text-gray-700 block mb-2">FILTRER PAR DATE D’ACHAT</label>
+                <input
+                  type="date"
+                  value={filterGroup}
+                  onChange={(e) => setFilterGroup(e.target.value)}
+                  className="w-full border-2 border-orange-500 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                />
+              </div>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="relative flex h-4 w-4">
-                    <input
-                      type="radio"
-                      name="prio"
-                      value="normal"
-                      checked={priorityValue === "normal"}
-                      onChange={() => setPriorityValue("normal")}
-                      className="peer appearance-none h-4 w-4 rounded-full border-2 border-orange-500 cursor-pointer"
-                    />
-                    <span className="pointer-events-none absolute inset-0 hidden peer-checked:flex items-center justify-center">
-                      <span className="h-2 w-2 rounded-full bg-orange-500"></span>
-                    </span>
-                  </span>
-                  Normal
-                </label>
+              <div className="flex-1 min-w-[150px]">
+                <label className="text-sm font-bold text-gray-700 block mb-2">STATUT</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full border-2 border-orange-500 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                >
+                  <option>Tous</option>
+                  <option>Actif</option>
+                  <option>Inactif</option>
+                  <option>Suspendu</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleActualiser}
+                  disabled={loading}
+                  className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors"
+                >
+                  <RefreshCw size={18} />
+                  Actualiser
+                </button>
               </div>
             </div>
           </div>
 
-          {/* === COLONNE DROITE === */}
-          <div className="col-span-8 scale-[0.95]">
-
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold flex-1 text-center">
-                LISTE RÉCAPITULATIVE DES TEMPS ET DURÉES D'ACCÈS
-              </h3>
-
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={toggleSelectAll}
-                  className="appearance-none w-4 h-4 border-2 border-orange-500 rounded-sm checked:bg-orange-500 checked:border-orange-500 cursor-pointer"
-                />
-                Tout sélectionner
-              </label>
-            </div>
-
-            {/* TABLEAU */}
-            <div className="border-2 border-orange-500 rounded-md overflow-hidden mb-5">
-              <div className="bg-orange-500 text-white text-xs font-semibold grid grid-cols-9 px-2 py-2 text-center">
-                <div>Sélection</div>
-                <div>Date début</div>
-                <div>Date fin</div>
-                <div>Heure début</div>
-                <div>Heure fin</div>
-                <div>Durée</div>
-                <div>Périodique</div>
-                <div>Quota (Mo)</div>
-                <div>Vitesse (kbit/s)</div>
+          {/* SECTION TABLEAU (colonnes fixes) */}
+          <div className="border-4 border-orange-500 rounded-2xl bg-white p-6 max-h-[600px] overflow-y-auto">
+            {filteredAccesses.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-400 text-lg">Aucun accès trouvé</p>
               </div>
-
-              <div className="bg-white">
-                {rows.map((r, index) => (
-                  <div
-                    key={r.id}
-                    className="grid grid-cols-9 items-center px-2 py-1.5 border-b border-orange-300 text-xs"
-                  >
-                    {/* Sélection */}
-                    <div className="flex justify-center">
-                      <input
-                        type="checkbox"
-                        checked={r.selected}
-                        onChange={(e) => toggleRow(index, e.target.checked)}
-                        className="appearance-none w-4 h-4 border-2 border-orange-500 rounded-sm checked:bg-orange-500 checked:border-orange-500 cursor-pointer"
-                      />
-                    </div>
-
-                    {/* Champs tableau */}
-                    <input
-                      className={`text-center outline-none px-1 ${r.startDate ? "bg-gray-100" : "bg-white"}`}
-                      value={r.startDate || ""}
-                      placeholder={r.startDate}
-                      disabled={!!r.startDate}
-                      onChange={(e) => {
-                        const updated = [...rows];
-                        updated[index].startDate = e.target.value;
-                        setRows(updated);
-                      }}
-                    />
-
-                    <input
-                      className={`text-center outline-none px-1 ${r.endDate ? "bg-gray-100" : "bg-white"}`}
-                      value={r.endDate || ""}
-                      placeholder={r.endDate}
-                      disabled={!!r.endDate}
-                      onChange={(e) => {
-                        const updated = [...rows];
-                        updated[index].endDate = e.target.value;
-                        setRows(updated);
-                      }}
-                    />
-
-                    <input
-                      type="time"
-                      className={`text-center outline-none px-1 ${r.startTime ? "bg-gray-100" : "bg-white"}`}
-                      value={r.startTime || ""}
-                      disabled={!!r.startTime}
-                      onChange={(e) => {
-                        const updated = [...rows];
-                        updated[index].startTime = e.target.value;
-                        setRows(updated);
-                      }}
-                    />
-
-                    <input
-                      type="time"
-                      className={`text-center outline-none px-1 ${r.endTime ? "bg-gray-100" : "bg-white"}`}
-                      value={r.endTime || ""}
-                      disabled={!!r.endTime}
-                      onChange={(e) => {
-                        const updated = [...rows];
-                        updated[index].endTime = e.target.value;
-                        setRows(updated);
-                      }}
-                    />
-
-                    <input
-                      className={`text-center outline-none px-1 ${r.duration ? "bg-gray-100" : "bg-white"}`}
-                      value={r.duration || ""}
-                      placeholder={r.duration}
-                      disabled={!!r.duration}
-                      onChange={(e) => {
-                        const updated = [...rows];
-                        updated[index].duration = e.target.value;
-                        setRows(updated);
-                      }}
-                    />
-
-                    {/* périodique */}
-                    <div className="text-center text-[11px]">
-                      {r.startDate && r.endDate
-                        ? `${formatDate(r.startDate)} → ${formatDate(r.endDate)}`
-                        : "Non défini"}
-                    </div>
-
-                    <input
-                      className={`text-center outline-none px-1 ${r.quota ? "bg-gray-100" : "bg-white"}`}
-                      value={r.quota || ""}
-                      placeholder={r.quota}
-                      disabled={!!r.quota}
-                      onChange={(e) => {
-                        const updated = [...rows];
-                        updated[index].quota = e.target.value;
-                        setRows(updated);
-                      }}
-                    />
-
-                    <input
-                      className={`text-center outline-none px-1 ${r.speed ? "bg-gray-100" : "bg-white"}`}
-                      value={r.speed || ""}
-                      placeholder={r.speed}
-                      disabled={!!r.speed}
-                      onChange={(e) => {
-                        const updated = [...rows];
-                        updated[index].speed = e.target.value;
-                        setRows(updated);
-                      }}
-                    />
-
-                  </div>
-                ))}
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-orange-500 text-white border-b-2 border-orange-500">
+                      {desiredColumns.map((col) => (
+                        <th key={col.key} className={headerClass(col.key)}>
+                          {col.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAccesses.map((row, idx) => (
+                      <tr key={row.id || row._id || idx} className="border-b border-gray-200 hover:bg-yellow-50 transition-colors">
+                        {desiredColumns.map((col) => (
+                          <td key={`${idx}-${col.key}`} className={cellClass(col.key)} title={col.key === "name" ? String(displayValue(row, col)) : undefined}>
+                            {col.key === "actions" ? (
+                              <div className="flex items-center justify-center gap-2">
+                                <button aria-label="Bloquer" onClick={() => handleBlock(row)} className="px-2 py-1 border border-red-500 text-red-600 rounded hover:bg-red-50 text-xs">Bloquer</button>
+                                <button aria-label="Activer" onClick={() => handleActivate(row)} className="px-2 py-1 border border-green-600 text-green-700 rounded hover:bg-green-50 text-xs">Activer</button>
+                              </div>
+                            ) : (
+                              displayValue(row, col)
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
-
-            {/* QUOTAS */}
-            <div className="border-2 border-orange-500 rounded-md p-4 flex items-center justify-between">
-
-              <div className="grid grid-cols-2 gap-4 w-3/4">
-                <div>
-                  <label className="text-xs font-semibold">Quota (Mo)</label>
-                  <input
-                    className="w-full border-2 border-orange-500 rounded px-3 py-1 mt-1 text-sm"
-                    value={quotaValue}
-                    onChange={(e) => setQuotaValue(e.target.value)}
-                  />
-                  <p className="text-[10px] text-gray-500 mt-1">0 = quota illimité</p>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold">Vitesse (kbit/s)</label>
-                  <input
-                    className="w-full border-2 border-orange-500 rounded px-3 py-1 mt-1 text-sm"
-                    value={speedValue}
-                    onChange={(e) => setSpeedValue(e.target.value)}
-                  />
-                  <p className="text-[10px] text-gray-500 mt-1">0 = vitesse Maximum</p>
-                </div>
-              </div>
-
-              {/* BTN VALIDER */}
-              <button
-                onClick={applySettings}
-                className="bg-purple-700 text-white px-4 py-2 text-sm rounded shadow hover:bg-purple-800"
-              >
-                Valider
-              </button>
-              {/* Inline fallback visible near the button when toast fails */}
-              {toastVisible && (
-                <div className={`ml-3 text-sm ${toastError ? 'text-red-600' : 'text-green-600'}`}>
-                  {toastMessage}
-                </div>
-              )}
-
-            </div>
+            )}
           </div>
         </div>
       </div>

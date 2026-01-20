@@ -363,7 +363,7 @@ export default function Login() {
               disabled={isLoading || isFormDisabled}
               className="bg-orange-400 hover:bg-orange-500 text-white font-semibold py-2.5 px-6 rounded-md transition duration-300 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? "Connexion..." : "Se connecter"}
+              {isLoading ? "Connexion..." : "Connecter"}
             </button>
           </div>
         </form>

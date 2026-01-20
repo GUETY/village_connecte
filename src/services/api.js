@@ -208,6 +208,12 @@ export const transactionsAPI = {
   remove: (id) => api.delete(`/transactions/${id}`).then(r => r.data),
 };
 
+// --- Nouvel export : API Historique des achats utilisateur (endpoint général user-access) ---
+export const userAccessAPI = {
+  list: (params) => api.get("/user-access", { params }).then(r => r.data),
+  get: (id) => api.get(`/user-access/${id}`).then(r => r.data),
+};
+
 // --- Exports API Statistiques (conforme au schéma Mongoose Statistique) ---
 export const statistiquesAPI = {
   list: (params) => api.get("/statistiques", { params }).then(r => r.data),

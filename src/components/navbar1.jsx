@@ -193,9 +193,18 @@ export const subLinks = [
 
 /* ===== Liens Sidebar ===== */
 function SidebarLink({ to, label, icon: Icon, sidebarOpen }) {
+  const handleLinkClick = (e) => {
+    // Actualiser la page pour ces liens
+    if (label === "Accueil" || label === "Gestion des utilisateurs") {
+      e.preventDefault();
+      window.location.href = to;
+    }
+  };
+
   return (
     <NavLink
       to={to}
+      onClick={handleLinkClick}
       className={({ isActive }) =>
         `flex items-center gap-3 px-3 py-2 rounded transition-colors duration-200 hover:text-red-500 ${
           isActive ? "text-red-500 font-semibold" : "text-white"
@@ -211,9 +220,18 @@ function SidebarLink({ to, label, icon: Icon, sidebarOpen }) {
 
 /* ===== Sous-liens ===== */
 function SidebarSubLink({ to, label }) {
+  const handleSubLinkClick = (e) => {
+    // Actualiser la page pour ces liens
+    if (label === "Gestion des accès utilisateurs" || label === "Gestion des alertes") {
+      e.preventDefault();
+      window.location.href = to;
+    }
+  };
+
   return (
     <NavLink
       to={to}
+      onClick={handleSubLinkClick}
       className={({ isActive }) =>
         `px-2 py-1 rounded text-sm transition-colors duration-200 hover:text-red-500 ${
           isActive ? "text-red-500 font-semibold" : "text-white"
