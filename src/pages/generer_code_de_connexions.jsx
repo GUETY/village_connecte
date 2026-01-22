@@ -49,13 +49,14 @@ function CodeGeneratorForm({ onGenerateCodes }) {
   const [formData, setFormData] = useState({
     categorieForfait: "",
     forfaitId: "",
-    nombreCodes: "",
+    nombreCodes: "10",
   });
 
   const [forfaitDescription, setForfaitDescription] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(""); // ← AJOUTE CETTE LIGNE
 
   const [forfaits, setForfaits] = useState([]);
   const [agents, setAgents] = useState([]);
@@ -92,6 +93,7 @@ function CodeGeneratorForm({ onGenerateCodes }) {
   const handleCategoryChange = (value) => {
     setFormData((s) => ({ ...s, categorieForfait: value, forfaitId: "" }));
     setForfaitDescription("");
+    setErrorMessage(""); // ← RÉINITIALISE L'ERREUR
   };
 
   const handleForfaitChange = (value) => {
@@ -102,6 +104,7 @@ function CodeGeneratorForm({ onGenerateCodes }) {
     });
     if (selected) {
       setForfaitDescription(selected.description || "");
+      setErrorMessage(""); // ← RÉINITIALISE L'ERREUR
     } else {
       setForfaitDescription("");
     }
@@ -109,7 +112,28 @@ function CodeGeneratorForm({ onGenerateCodes }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    // ← VALIDATION DE SÉCURITÉ : Vérifier que catégorie ET forfait sont sélectionnés
+    if (!formData.categorieForfait || !formData.categorieForfait.trim()) {
+      setErrorMessage("⚠️ Veuillez sélectionner une catégorie de forfait");
+      setTimeout(() => setErrorMessage(""), 4000);
+      return;
+    }
+
+    if (!formData.forfaitId || !formData.forfaitId.trim()) {
+      setErrorMessage("⚠️ Veuillez sélectionner un forfait");
+      setTimeout(() => setErrorMessage(""), 4000);
+      return;
+    }
+
+    if (!formData.nombreCodes || Number(formData.nombreCodes) < 1) {
+      setErrorMessage("⚠️ Veuillez entrer un nombre de codes valide (minimum 1)");
+      setTimeout(() => setErrorMessage(""), 4000);
+      return;
+    }
+
     setIsSubmitting(true);
+    setErrorMessage(""); // ← RÉINITIALISE LES ERREURS AVANT LE TRAITEMENT
 
     // récupérer les valeurs du formulaire / forfait sélectionné
     const qty = Number(formData.nombreCodes || 1);
@@ -213,6 +237,16 @@ function CodeGeneratorForm({ onGenerateCodes }) {
       <div className="bg-white rounded-lg p-4 md:p-5 mb-5 border border-gray-200 shadow-sm">
         <h2 className="text-sm md:text-base font-bold text-gray-900 mb-4">Générateur de codes</h2>
 
+        {/* ← AFFICHE LES ERREURS DE VALIDATION */}
+        {errorMessage && (
+          <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded flex items-start gap-2">
+            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* Ligne 1 : Catégorie et Forfait */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
@@ -226,7 +260,11 @@ function CodeGeneratorForm({ onGenerateCodes }) {
                 name="categorieForfait"
                 value={formData.categorieForfait}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="px-2 md:px-3 py-1.5 border-2 border-[#ff7a00] rounded text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-[#ff7a00] bg-white cursor-pointer transition-all hover:border-[#ff9933]"
+                className={`px-2 md:px-3 py-1.5 border-2 rounded text-xs md:text-sm focus:outline-none focus:ring-2 bg-white cursor-pointer transition-all hover:border-[#ff9933] ${
+                  formData.categorieForfait
+                    ? "border-green-500 focus:ring-green-500"
+                    : "border-[#ff7a00] focus:ring-[#ff7a00]"
+                }`}
               >
                 <option value="">-- Sélectionner une catégorie --</option>
                 <option value="Hebdomadaire">Hebdomadaire</option>
@@ -247,7 +285,11 @@ function CodeGeneratorForm({ onGenerateCodes }) {
                 value={formData.forfaitId}
                 onChange={(e) => handleForfaitChange(e.target.value)}
                 disabled={!formData.categorieForfait}
-                className="px-2 md:px-3 py-1.5 border-2 border-[#ff7a00] rounded text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-[#ff7a00] bg-white cursor-pointer transition-all hover:border-[#ff9933] disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`px-2 md:px-3 py-1.5 border-2 rounded text-xs md:text-sm focus:outline-none focus:ring-2 bg-white cursor-pointer transition-all hover:border-[#ff9933] ${
+                  formData.forfaitId
+                    ? "border-green-500 focus:ring-green-500"
+                    : "border-[#ff7a00] focus:ring-[#ff7a00]"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <option value="">-- Sélectionner un forfait --</option>
                 {forfaitsFiltres.length > 0 ? (
@@ -293,10 +335,20 @@ function CodeGeneratorForm({ onGenerateCodes }) {
               <span className="text-xs md:text-sm font-semibold text-gray-700 mb-1 whitespace-nowrap">code(s)</span>
             </div>
 
+            {/* ← BOUTON DÉSACTIVÉ SI CATÉGORIE OU FORFAIT NON SÉLECTIONNÉS */}
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="px-4 md:px-6 py-1.5 md:py-2 bg-[#ff7a00] text-white font-bold text-sm md:text-base rounded hover:bg-[#ff9933] shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95 w-full sm:w-auto whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
+              disabled={isSubmitting || !formData.categorieForfait || !formData.forfaitId}
+              className={`px-4 md:px-6 py-1.5 md:py-2 text-white font-bold text-sm md:text-base rounded shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95 w-full sm:w-auto whitespace-nowrap relative overflow-hidden ${
+                !formData.categorieForfait || !formData.forfaitId
+                  ? "bg-gray-400 cursor-not-allowed opacity-60"
+                  : "bg-[#ff7a00] hover:bg-[#ff9933]"
+              }`}
+              title={
+                !formData.categorieForfait || !formData.forfaitId
+                  ? "Sélectionnez une catégorie et un forfait pour continuer"
+                  : ""
+              }
             >
               <span className={`transition-all ${isSubmitting ? "opacity-0" : "opacity-100"}`}>
                 Valider
@@ -677,6 +729,32 @@ export default function GenererCodeDeConnexions() {
       }
       return updated;
     });
+  };
+
+  async function handleAchatForfait(forfait) {
+    // Générer un code unique
+    const code = generateConnectionCode();
+    // Construire le payload
+    const payload = {
+      code,
+      forfaitId: forfait._id || forfait.id,
+      forfaitName: forfait.name,
+      category: forfait.category,
+      durationValue: forfait.durationValue,
+      durationUnit: forfait.durationUnit || "jours",
+      price: forfait.price,
+      used: false,
+      date: new Date().toISOString().slice(0, 10)
+    };
+    try {
+      await codesAPI.create(payload);
+      setSuccessMessage(`Votre code de connexion : ${code}`);
+      setShowSuccess(true);
+      setCodes((prev) => [...prev, payload]);
+    } catch (err) {
+      setSuccessMessage("Erreur lors de la génération du code");
+      setShowSuccess(true);
+    }
   };
 
   return (
