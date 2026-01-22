@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { agentsAPI, groupsAPI } from "../../services/api";
+import { agentsAPI, groupsAPI, usersAPI } from "../../services/api"; // <-- MAJ : Ajout usersAPI
 import Navbar from "../../components/navbar1.jsx";
 
 export default function GestionDesAccesUtilisateurs() {
@@ -71,27 +71,67 @@ export default function GestionDesAccesUtilisateurs() {
   const [availableLogins, setAvailableLogins] = useState([]);
   const [availableGroups, setAvailableGroups] = useState([]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [uRes, gRes] = await Promise.allSettled([
-          agentsAPI.list(),
-          groupsAPI.list()
-        ]);
-        
-        if (uRes.status === "fulfilled") {
-          const users = Array.isArray(uRes.value) ? uRes.value : uRes.value?.data || [];
-          setAvailableLogins(users.map((u) => u.login || u.name));
-        }
-        
-        if (gRes.status === "fulfilled") {
-          const groups = Array.isArray(gRes.value) ? gRes.value : gRes.value?.data || [];
-          setAvailableGroups(groups || []);
-        }
-      } catch (err) {
-        console.error("load users/groups:", err);
+  // État pour la création d'un nouvel utilisateur mobile
+  const [newLogin, setNewLogin] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  // === Fonction pour créer l'utilisateur mobile ===
+  const handleCreateMobileUser = async () => {
+    if (!newLogin || !newPassword) {
+      showToast("Veuillez remplir login et mot de passe", true);
+      return;
+    }
+    try {
+      // Ajout du champ 'name' car souvent obligatoire sur le backend
+      const payload = { 
+        login: newLogin,
+        name: newLogin, // On utilise le login comme nom par défaut
+        password: newPassword,
+        role: "user"
+      };
+
+      console.debug("Tentative de création d'utilisateur avec :", payload);
+      
+      const response = await usersAPI.create(payload);
+      
+      showToast("Utilisateur mobile créé avec succès");
+      setNewLogin("");
+      setNewPassword("");
+      setIsCreating(false);
+      loadData();
+    } catch (err) {
+      // Affiche le message d'erreur précis du serveur dans la console
+      console.error("Détails de l'erreur serveur:", err.response?.data);
+      
+      const serverMessage = err.response?.data?.message || "Erreur serveur (500)";
+      showToast(serverMessage, true);
+    }
+  };
+
+  const loadData = async () => {
+    try {
+      const [uRes, gRes] = await Promise.allSettled([
+        usersAPI.list(), // <-- MAJ : Utilise usersAPI pour le mobile
+        groupsAPI.list()
+      ]);
+      
+      if (uRes.status === "fulfilled") {
+        const users = Array.isArray(uRes.value) ? uRes.value : uRes.value?.data || [];
+        setAvailableLogins(users); // Stocke les objets complets
       }
-    })();
+      
+      if (gRes.status === "fulfilled") {
+        const groups = Array.isArray(gRes.value) ? gRes.value : gRes.value?.data || [];
+        setAvailableGroups(groups || []);
+      }
+    } catch (err) {
+      console.error("load users/groups:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   // Charger les règles depuis la base quand on change le login/group sélectionné
@@ -200,6 +240,36 @@ export default function GestionDesAccesUtilisateurs() {
             </div>
           </div>
         </div>
+
+        {/* SECTION CRÉATION RAPIDE (Optionnelle mais recommandée) */}
+        {isCreating && (
+          <div className="mb-6 p-4 border-2 border-purple-500 rounded-lg flex items-end gap-4 bg-purple-50">
+            <div>
+              <label className="block text-xs font-bold mb-1">Nouveau Login Mobile</label>
+              <input 
+                value={newLogin} 
+                onChange={e => setNewLogin(e.target.value)}
+                className="border border-purple-300 rounded px-2 py-1 text-sm" 
+                placeholder="ex: jean.dupont"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold mb-1">Mot de passe</label>
+              <input 
+                type="password"
+                value={newPassword} 
+                onChange={e => setNewPassword(e.target.value)}
+                className="border border-purple-300 rounded px-2 py-1 text-sm"
+                placeholder="********"
+              />
+            </div>
+            <button onClick={handleCreateMobileUser} className="bg-purple-600 text-white px-4 py-1.5 rounded text-sm hover:bg-purple-700">
+              Enregistrer l'accès mobile
+            </button>
+            <button onClick={() => setIsCreating(false)} className="text-gray-500 text-sm underline">Annuler</button>
+          </div>
+        )}
+
         {/* SÉLECTEURS */}
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-10">
@@ -230,10 +300,21 @@ export default function GestionDesAccesUtilisateurs() {
                   className="rounded-full border-2 border-orange-500 px-3 py-1.5 w-56 text-sm disabled:opacity-50"
                 >
                   <option value="">-- choisir --</option>
-                  {availableLogins.map((l) => (
-                    <option key={l} value={l}>{l}</option>
+                  {availableLogins.map((u) => (
+                    <option key={u.id || u._id} value={u.login || u.name}>
+                      {u.login || u.name}
+                    </option>
                   ))}
                 </select>
+                
+                {/* Bouton pour ouvrir la création */}
+                <button 
+                  onClick={() => setIsCreating(true)}
+                  className="bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold hover:bg-orange-600"
+                  title="Créer un nouvel accès mobile"
+                >
+                  +
+                </button>
               </div>
 
               {/* Groupe */}
