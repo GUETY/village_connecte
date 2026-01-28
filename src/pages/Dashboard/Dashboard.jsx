@@ -801,7 +801,7 @@ export default function Accueil() {
                   <div className="text-xs sm:text-sm text-orange-500">{bornesAlert}</div>
                 </Card>
 
-                <Card color="orange" icon={<AlertCircle size={24} />} onClick={() => navigate('/consultation-des-alertes')}>
+                <Card color="orange" icon={<AlertCircle size={24} />} onClick={() => navigate('/alertes')}>
                   <div className="text-base sm:text-lg font-medium text-gray-700">Alertes actives</div>
                   <div className="text-xl sm:text-2xl font-bold text-gray-800">{activeAlertsCount}</div>
                   <div className="text-xs sm:text-sm text-orange-600">{toTreatCount} à traiter</div>

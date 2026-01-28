@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api, { authAPI, setAuthToken } from "../../services/api.js";
+import { useAuth } from "../../hooks/useAuth";
 import Village from "../../../public/logo-village.jpeg";
 import DOMPurify from "dompurify"; // npm install dompurify
 
@@ -49,6 +50,7 @@ export default function Login() {
   const [attempts, setAttempts] = useState(0); // Compteur de tentatives
   const [lockedUntil, setLockedUntil] = useState(null); // Blocage temporaire
   const navigate = useNavigate();
+  const auth = useAuth();
   const submitTimeoutRef = useRef(null);
 
   // Validation des entrées côté client
@@ -106,21 +108,17 @@ export default function Login() {
   // handleSubmit sécurisé
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     // Vérifier le rate limiting
     if (!checkRateLimit()) {
       return;
     }
-
     // Valider les inputs
     if (!validateInputs(login, password)) {
       return;
     }
-
     setError("");
     setShowError(false);
     setIsLoading(true);
-
     // Timeout pour éviter les requêtes longues
     submitTimeoutRef.current = setTimeout(() => {
       setIsLoading(false);
@@ -128,13 +126,11 @@ export default function Login() {
       setShowError(true);
       setAttempts(attempts + 1);
     }, 10000); // 10 secondes
-
     try {
       let res;
       try {
         // Sanitizer les données avant envoi
         const sanitizedLogin = DOMPurify.sanitize(login.trim());
-        
         res = await authAPI.login({ 
           login: sanitizedLogin, 
           password: password // Le mot de passe ne doit jamais être loggé
@@ -182,7 +178,8 @@ export default function Login() {
           setShowError(true);
           return;
         } else if (err?.message === "Network Error" || !err?.response) {
-          setError("Erreur de connexion. Vérifiez votre connexion internet.");
+          // Afficher le message d'identifiants incorrects plutôt que message réseau
+          setError("Login ou mot de passe incorrect");
           setShowError(true);
           return;
         } else {
@@ -191,20 +188,17 @@ export default function Login() {
       }
 
       clearTimeout(submitTimeoutRef.current);
-
       // Valider la réponse
       const token =
         res?.token ||
         res?.access_token ||
         (res.data && (res.data.token || res.data.access_token));
-
       if (!token || typeof token !== "string" || token.length > 5000) {
         setError("Réponse serveur invalide. Veuillez réessayer.");
         setShowError(true);
         setIsLoading(false);
         return;
       }
-
       // Vérifier que le token est un JWT valide (basique)
       if (!token.includes(".")) {
         setError("Token invalide reçu du serveur.");
@@ -212,25 +206,52 @@ export default function Login() {
         setIsLoading(false);
         return;
       }
-
+      // Décoder le token pour vérifier le rôle
+      let decodedRole = null;
+      try {
+        // Décodage JWT sans dépendance externe (base64)
+        const payload = token.split('.')[1];
+        const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+        decodedRole = decoded.role;
+      } catch (e) {
+        // Si erreur de décodage, ignorer
+      }
+      if (decodedRole) {
+        // Pas de message de succès affiché : stocker et rediriger immédiatement
+        setAuthToken(token);
+        localStorage.setItem("village_token", token);
+        const userObj = res.user || res.data?.user || null;
+        if (userObj && typeof userObj === "object") {
+          localStorage.setItem("village_user", JSON.stringify(userObj));
+        }
+        try {
+          if (auth && typeof auth.login === "function") auth.login(token, userObj);
+        } catch (e) {
+          // ignore
+        }
+        setAttempts(0);
+        setLockedUntil(null);
+        cleanup();
+        navigate("/Dashboard");
+        return;
+      }
       // Stocker le token en toute sécurité
       setAuthToken(token);
       localStorage.setItem("village_token", token);
-
       // Stocker les infos utilisateur si présentes (et les sanitizer)
-      if (res.user || res.data?.user) {
-        const user = res.user || res.data.user;
-        // Valider que user est un objet
-        if (typeof user === "object" && user !== null) {
-          localStorage.setItem("village_user", JSON.stringify(user));
-        }
+      const userObj = res.user || res.data?.user || null;
+      if (userObj && typeof userObj === "object") {
+        localStorage.setItem("village_user", JSON.stringify(userObj));
       }
-
+      try {
+        if (auth && typeof auth.login === "function") auth.login(token, userObj);
+      } catch (e) {
+        // ignore
+      }
       // Réinitialiser les tentatives en cas de succès
       setAttempts(0);
       setLockedUntil(null);
       cleanup();
-      
       // Redirection
       navigate("/Dashboard");
     } catch (err) {
@@ -238,10 +259,12 @@ export default function Login() {
       setIsLoading(false);
       console.error("Login error (non-détaillé pour sécurité)");
       
-      const msg = 
-        err?.response?.data?.message || 
-        "Vos informations ne correspondent pas";
-      setError(DOMPurify.sanitize(msg));
+      if (err?.response?.status === 401) {
+        setError("Login ou mot de passe incorrect");
+      } else {
+        const msg = err?.response?.data?.message || "Vos informations ne correspondent pas";
+        setError(DOMPurify.sanitize(msg));
+      }
       setShowError(true);
       setAttempts(attempts + 1);
     }

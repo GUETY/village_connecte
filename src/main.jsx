@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './styles/tailwind.css'
 import './index.css'
-import ConsultationDesAlertes from './pages/consultation_des_alertes.jsx'
 import GestionDesBornesWifi from './pages/gestion_des_bornes_wifi.jsx'
+import ConsultationDesAlertes from './pages/consultation_des_alertes.jsx'
 import GestionsDesTransactions from './pages/gestions_des_transactions.jsx'
 import Statistiques from './pages/statistiques.jsx'
 import GestionsDesAgents from './pages/gestions_des_agents.jsx'
@@ -34,7 +34,9 @@ createRoot(document.getElementById('root')).render(
           <Route path="/reset-password" element={<ResetPassword />} /> {/* ajout ResetPassword */}
           <Route path="/ResetPassword" element={<ResetPassword />} /> {/* alias si nécessaire */}
           {/* accès à l'application après connexion */}
+          {/* page Consultation des alertes */}
           <Route path="/consultation-des-alertes" element={<ConsultationDesAlertes />} />
+          <Route path="/consultation_des_alertes" element={<ConsultationDesAlertes />} />
 
           {/* Gestion des bornes Wi-Fi */}
           <Route path="/gestion-des-bornes-wifi" element={<GestionDesBornesWifi />} />

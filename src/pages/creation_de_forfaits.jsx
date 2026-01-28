@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "../components/navbar";
 // --- ajout import API ---
 import { forfaitAPI, setAuthToken } from "../services/api.js";
+import { sanitizeHtml } from "../utils/sanitize";
 
 /**
  * Page : Création de forfaits
@@ -43,7 +44,7 @@ function SuccessNotification({ message, onClose, type = "success" }) {
           )}
         </div>
         <div className="flex-1">
-          <p className={`text-sm font-semibold ${textColor}`}>{message}</p>
+          <div className={`text-sm font-semibold ${textColor}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(message) }} />
         </div>
         <button onClick={onClose} className={`${closeColor} transition-colors`}>
           ✕
@@ -68,7 +69,7 @@ function ConfirmDialog({ title, message, onConfirm, onCancel }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fadeIn">
       <div className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl ${isConfirming ? "animate-scaleDown" : "animate-scaleUp"}`}>
         <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
-        <p className="text-sm text-gray-600 mb-6">{message}</p>
+        <div className="text-sm text-gray-600 mb-6" dangerouslySetInnerHTML={{ __html: sanitizeHtml(message) }} />
         
         <div className="flex gap-3 justify-end">
           <button

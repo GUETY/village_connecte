@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Navbar from "../components/navbar";
 // import des API (doit exister dans src/services/api.js)
 import { codesAPI, setAuthToken, forfaitAPI, agentsAPI } from "../services/api.js";
+import { sanitizeHtml } from "../utils/sanitize";
 
 /**
  * Page : Générer des codes de connexion
@@ -25,7 +26,6 @@ function SuccessNotification({ message, onClose }) {
     const timer = setTimeout(onClose, 3000);
     return () => clearTimeout(timer);
   }, [onClose]);
-
   return (
     <div className="fixed top-6 right-6 z-50 animate-slideDown">
       <div className="bg-green-50 border-2 border-green-400 rounded-lg p-4 shadow-lg flex items-center gap-3 max-w-sm">
@@ -228,6 +228,8 @@ function CodeGeneratorForm({ onGenerateCodes }) {
     });
   }, [forfaits, formData.categorieForfait]);
 
+  const safeForfaitDescription = sanitizeHtml(forfaitDescription || "");
+
   return (
     <>
       {showSuccess && (
@@ -309,7 +311,7 @@ function CodeGeneratorForm({ onGenerateCodes }) {
           {forfaitDescription && (
             <div className="p-2 md:p-3 bg-orange-50 border-2 border-[#ff7a00] rounded animate-slideIn text-xs md:text-sm">
               <p className="font-semibold text-gray-700 mb-1">Description :</p>
-              <p className="text-gray-700">{forfaitDescription}</p>
+              <div className="text-gray-700" dangerouslySetInnerHTML={{ __html: safeForfaitDescription }} />
             </div>
           )}
 

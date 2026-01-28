@@ -3,13 +3,13 @@ import Navbar from "../components/navbar";
 // Import de l'API transactions et agents
 import { transactionsAPI, agentsAPI, setAuthToken } from "../services/api.js";
 
-/**
- * Page : Gestions des transactions
- * - Filtrage par période, agent et région
+/*
+ * Page : Gestion des transactions
+ *
  * - Tableau des transactions avec détails (conforme schéma Mongoose)
  * - Affichage du montant total
  * - Design professionnel, animations fluides et responsive
- * 
+ *
  * Champs BD : date, codeAgent, agent, userLogin, duration, forfait, amount
  */
 

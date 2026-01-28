@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import Navbar from "../components/navbar.jsx";
 import "../styles/tailwind.css";
 import { alertesAPI } from "../services/api.js";
+import { sanitizeHtml } from "../utils/sanitize";
 
 // map backend status -> frontend etat
 function mapStatus(status) {
@@ -259,7 +260,9 @@ export default function App() {
                       <td className="px-3 py-4 align-middle text-xs sm:text-sm text-gray-700 whitespace-nowrap">{a.codeType}</td>
                       <td className="px-3 py-4 align-middle text-xs sm:text-sm text-gray-700 whitespace-nowrap">{a.code}</td>
                       <td className="px-3 py-4 align-middle text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">{a.nom}</td>
-                      <td className="px-3 py-4 align-middle text-xs sm:text-sm text-gray-700 min-w-48 max-w-xs">{a.alertes}</td>
+                      <td className="px-3 py-4 align-middle text-xs sm:text-sm text-gray-700 min-w-48 max-w-xs">
+                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.alertes) }} />
+                      </td>
                       <td className="px-3 py-4 align-middle text-xs sm:text-sm text-gray-700 whitespace-nowrap">{a.dateConstat}</td>
 
                       {/* Bouton traité */}

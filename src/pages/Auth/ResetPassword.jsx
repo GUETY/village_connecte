@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { resetPasswordRequest } from "../../services/auth.api"; 
+import { sanitizeHtml } from "../../utils/sanitize";
 // Chargement sûr du logo depuis /public (accessible à la racine)
 let logoVillage;
 try {
@@ -82,9 +83,7 @@ export default function ResetPassword() {
         {/* Formulaire */}
         <form onSubmit={handleSubmit} className="px-10 py-8">
           {message && (
-            <p className="text-center text-lg mb-6 text-red-500 font-semibold">
-              {message}
-            </p>
+            <div className="text-center text-lg mb-6 text-red-500 font-semibold" dangerouslySetInnerHTML={{ __html: sanitizeHtml(message) }} />
           )}
 
           {/* Login */}

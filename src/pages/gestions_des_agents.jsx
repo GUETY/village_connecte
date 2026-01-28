@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import Navbar from "../components/navbar";
 // Import de l'API axios
 import { agentsAPI, setAuthToken } from "../services/api.js";
+import { sanitizeHtml } from "../utils/sanitize";
 // import utilitaires image (déplacés)
 import { compressImageToLimit, isImageFile } from "../utils/imageUtils.js";
 
@@ -47,7 +48,7 @@ function SuccessNotification({ message, onClose, type = "success" }) {
 
   return (
     <div className={`fixed top-6 right-6 max-w-md p-4 rounded-lg border-2 ${bgColor} ${textColor} font-semibold text-sm shadow-lg animate-notifSlide z-50`}>
-      {message}
+      <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(message) }} />
     </div>
   );
 }
@@ -62,7 +63,7 @@ function ConfirmDialog({ title, message, onConfirm, onCancel, confirmLabel = "Ou
         style={{ transform: "none" }}
       >
         <h2 className="text-lg font-bold text-gray-900 mb-2">{title}</h2>
-        <p className="text-gray-600 text-sm mb-6">{message}</p>
+        <div className="text-gray-600 text-sm mb-6" dangerouslySetInnerHTML={{ __html: sanitizeHtml(message) }} />
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}

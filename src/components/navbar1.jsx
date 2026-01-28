@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useAuth } from "../hooks/useAuth";
 import { NavLink, useLocation } from "react-router-dom";
 import Header from "./header1";
+import NavbarAdmin from "./navbar_admin";
+import NavbarAgent from "./navbar_agent";
 // Chargement sûr du logo depuis /public (accessible à la racine)
 let LogoImg;
 try {
@@ -16,6 +19,24 @@ export default function Navbar({ children, onSidebarToggle }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [bornesOpen, setBornesOpen] = useState(true);
   const location = useLocation();
+  const { user, role } = useAuth();
+
+  // Si role admin, déléguer l'affichage à NavbarAdmin (préserve children)
+  if (role === "admin") {
+    return (
+      <NavbarAdmin sidebarOpen={sidebarOpen} onSidebarToggle={onSidebarToggle}>
+        {children}
+      </NavbarAdmin>
+    );
+  }
+  // Si role agent, déléguer à NavbarAgent
+  if (role === "agent") {
+    return (
+      <NavbarAgent sidebarOpen={sidebarOpen} onSidebarToggle={onSidebarToggle}>
+        {children}
+      </NavbarAgent>
+    );
+  }
 
   // Désactive le scroll horizontal globalement (et restaure à la destruction)
   useEffect(() => {
@@ -84,6 +105,16 @@ export default function Navbar({ children, onSidebarToggle }) {
             className="flex items-center gap-2 text-white hover:text-red-500 focus:outline-none transition-colors"
             aria-label="Toggle sidebar"
           >
+            {/* Liens visibles uniquement pour l'admin */}
+            {user?.role === "admin" && (
+              <>
+                <SidebarLink to="/dashboard" label="Accueil" icon={HomeIcon} sidebarOpen={sidebarOpen} />
+                <SidebarLink to="/groupe-login" label="Gestion des utilisateurs" icon={UserIcon} sidebarOpen={sidebarOpen} />
+                <SidebarLink to="/users" label="Gestion des accès utilisateurs" icon={UserIcon} sidebarOpen={sidebarOpen} />
+                <SidebarLink to="/alertes" label="Gestion des alertes" icon={AlertIcon} sidebarOpen={sidebarOpen} />
+                <SidebarLink to="/consultation-des-alertes" label="Consultation des alertes" icon={AlertIcon} sidebarOpen={sidebarOpen} />
+              </>
+            )}
             <svg
               className="w-5 h-5 icon-strong hover:scale-125 transition-transform"
               viewBox="0 0 24 24"
@@ -154,11 +185,11 @@ export default function Navbar({ children, onSidebarToggle }) {
 
           {/* === Autres liens === */}
           <div className="mt-5">
-            <SidebarLink to="/gestions-des-transactions" label="Gestions des transactions" icon={ChartIcon} sidebarOpen={sidebarOpen} />
+            <SidebarLink to="/gestions-des-transactions" label="Gestion des transactions" icon={ChartIcon} sidebarOpen={sidebarOpen} />
             <SidebarLink to="/statistiques" label="Statistiques" icon={StatsIcon} sidebarOpen={sidebarOpen} />
-            <SidebarLink to="/gestions-des-agents" label="Gestions des agents" icon={AgentsIcon} sidebarOpen={sidebarOpen} />
+            <SidebarLink to="/gestions-des-agents" label="Gestion des agents" icon={AgentsIcon} sidebarOpen={sidebarOpen} />
             <SidebarLink to="/creation-de-forfaits" label="Création de forfaits" icon={BookIcon} sidebarOpen={sidebarOpen} />
-            <SidebarLink to="/generer-code-de-connexions" label="Générer code de connexions" icon={CodeIcon} sidebarOpen={sidebarOpen} />
+            <SidebarLink to="/generer-code-de-connexions" label="Générer des codes de connexion" icon={CodeIcon} sidebarOpen={sidebarOpen} />
           </div>
         </nav>
       </aside>
@@ -194,7 +225,14 @@ export const subLinks = [
 /* ===== Liens Sidebar ===== */
 function SidebarLink({ to, label, icon: Icon, sidebarOpen }) {
   const handleLinkClick = (e) => {
-    // Actualiser la page pour ces liens
+    // Si on clique sur le lien actif, forcer le rechargement complet
+    if (window.location.pathname === to) {
+      e.preventDefault();
+      window.location.href = to;
+      return;
+    }
+
+    // Ancienne logique : forcer navigation complète pour certains liens
     if (label === "Accueil" || label === "Gestion des utilisateurs") {
       e.preventDefault();
       window.location.href = to;

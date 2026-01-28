@@ -13,35 +13,47 @@ export default function Header({ sidebarOpen }) {
     return () => clearInterval(t);
   }, []);
 
-  // mapping statique + détection robuste par sous-chaîne
+  // mapping statique étendu + détection robuste par sous-chaîne
   const routeTitleMap = {
-    "/dashboard/alertes": "Gestion des alertes",
+    "/": "Consultation des alertes",
+    "/consultation-des-alertes": "Consultation des alertes",
+    "/consultation_des_alertes": "Consultation des alertes",
     "/alertes": "Gestion des alertes",
+    "/dashboard": "Tableau de bord administrateur",
+    "/dashboard/alertes": "Gestion des alertes",
+    "/gestion-des-bornes-wifi": "Gestion des Bornes Wi‑Fi",
+    "/gestion_des_bornes_wifi": "Gestion des Bornes Wi‑Fi",
+    "/gestion-des-transactions": "Gestion des transactions",
+    "/statistiques": "Statistiques",
+    "/gestions-des-agents": "Gestion des agents",
+    "/creation-de-forfaits": "Création de forfaits",
+    "/generer-code-de-connexions": "Générer des codes de connexion",
+    "/groupe-login": "Création de groupe et de login",
+    "/users": "Gestion des accès utilisateurs",
   };
 
   // priorité : correspondance exacte, sinon détection par mots-clés
-  let displayTitle = routeTitleMap[path] || "Tableau de bord de l'administrateur";
+  let displayTitle = routeTitleMap[path] || "Tableau de bord administrateur ";
 
-  // Cas spécial : page Gestion des accès utilisateurs (détection insensible à la casse)
+  // Détection par sous-chaîne (insensible à la casse)
   const lcPath = String(path || "").toLowerCase();
-  if (lcPath.includes("users") || lcPath.includes("acces") || lcPath.includes("gestion-des-acces") || lcPath.includes("gestion-des-acces-utilisateurs") || lcPath.includes("acces-utilisateurs") || lcPath.includes("utilisateurs")) {
+  if (lcPath.includes("users") || lcPath.includes("acces") || lcPath.includes("utilisateurs")) {
     displayTitle = "Gestion des accès utilisateurs";
   }
-
-  // Cas spécial : création de groupe et de login
   if (lcPath.includes("groupe-login") || lcPath.includes("creation-groupe-login")) {
     displayTitle = "Création de groupe et de login";
   }
-
-  // Cas spécial : page Alertes
-  if (lcPath.includes("alerte") || lcPath.includes("alertes")) {
-    displayTitle = "Gestion des alertes";
+  if (lcPath.includes("alerte") || lcPath.includes("alertes") || lcPath.includes("consultation")) {
+    displayTitle = "Consultation des alertes";
   }
-
-  // autres détections utiles (exemples)
-  // legacy catch-all: if path includes 'users' (case-insensitive) set title
-  if (lcPath.includes("users") && !lcPath.includes("bornes")) {
-    displayTitle = "Gestion des accès utilisateurs";
+  if (lcPath.includes("bornes") || lcPath.includes("bornes_wifi") || lcPath.includes("bornes-wifi")) {
+    displayTitle = "Gestion des Bornes Wi‑Fi";
+  }
+  if (lcPath.includes("transaction")) {
+    displayTitle = "Gestion des transactions";
+  }
+  if (lcPath.includes("statist")) {
+    displayTitle = "Statistiques";
   }
 
   const handleLogout = async () => {

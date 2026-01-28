@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import Header from "./header";
+import { useAuth } from "../hooks/useAuth";
+import NavbarAdmin from "./navbar_admin";
+import NavbarAgent from "./navbar_agent";
 
 /**
  * Navbar réutilisable — header retiré d'ici (header.jsx gère le titre dynamique)
@@ -8,6 +11,12 @@ import Header from "./header";
  * - animations hover / glow
  */
 export default function Navbar({ children }) {
+  const { role } = useAuth();
+
+  // Si admin ou agent, déléguer à la navbar correspondante
+  if (role === "admin") return <NavbarAdmin>{children}</NavbarAdmin>;
+  if (role === "agent") return <NavbarAgent>{children}</NavbarAgent>;
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [bornesOpen, setBornesOpen] = useState(true);
   const location = useLocation();
@@ -123,19 +132,19 @@ export default function Navbar({ children }) {
               />
               <SidebarSubLink
                 to="/alertes"
-                label="Gestions des alertes"
+                label="Gestion des alertes"
                 location={location}
               />
               <SidebarSubLink
                 to="/consultation-des-alertes"                  // route existante prise en charge par le header
                 alt="/consultation_des_alertes" // ancien alias conservé pour compatibilité
-                label="Consultations des alertes"
+                label="Consultation des alertes"
                 location={location}
               />
               <SidebarSubLink
                 to="/gestion-des-bornes-wifi"
                 alt="/gestion_des_bornes_wifi"
-                label="Gestion des bornes wi‑fi"
+                label="Gestion des bornes Wi‑Fi"
                 location={location}
               />
             </div>
@@ -144,7 +153,7 @@ export default function Navbar({ children }) {
           <div className="mt-5">
             <SidebarLink
               to="/gestions-des-transactions"
-              label="Gestions des transactions"
+              label="Gestion des transactions"
               icon={ChartIcon}
               location={location}
               sidebarOpen={sidebarOpen}
@@ -158,7 +167,7 @@ export default function Navbar({ children }) {
             />
             <SidebarLink
               to="/gestions-des-agents"
-              label="Gestions des agents"
+              label="Gestion des agents"
               icon={AgentsIcon}
               location={location}
               sidebarOpen={sidebarOpen}
@@ -172,7 +181,7 @@ export default function Navbar({ children }) {
             />
             <SidebarLink
               to="/generer-code-de-connexions"
-              label="Générer code de connexions"
+              label="Générer des codes de connexion"
               icon={CodeIcon}
               location={location}
               sidebarOpen={sidebarOpen}
@@ -202,8 +211,16 @@ function SidebarLink({ to, label, icon: Icon, location, sidebarOpen }) {
   const base = "w-full text-left px-3 py-2 rounded flex items-center gap-3 transition-all duration-200 hover:bg-white/10 hover:shadow-md group";
   const color = isActive ? "text-red-500 font-semibold" : "text-white hover:text-white/95";
 
+  const handleClick = (e) => {
+    // si on clique sur le lien déjà actif -> recharger la page
+    if (pathname === to) {
+      e.preventDefault();
+      window.location.href = to;
+    }
+  };
+
   return (
-    <Link to={to} className={`${base} ${color}`} title={!sidebarOpen ? label : ""}>
+    <Link to={to} onClick={handleClick} className={`${base} ${color}`} title={!sidebarOpen ? label : ""}>
       {/* Icône agrandie quand sidebar fermée + animation glow hover */}
       {Icon && (
         <div className={`relative transition-all duration-200 ${sidebarOpen ? "" : "group-hover:drop-shadow-lg"}`}>

@@ -54,8 +54,9 @@ function SuccessNotification({ message, onClose, type = "success" }) {
     return () => clearTimeout(t);
   }, [onClose]);
 
-  const bg = type === "success" ? "bg-green-50 border-green-500" : type === "info" ? "bg-blue-50 border-blue-500" : "bg-red-50 border-red-500";
-  const text = type === "success" ? "text-green-800" : type === "info" ? "text-blue-800" : "text-red-800";
+    const bg = type === "success" ? "bg-green-50 border-green-500" : type === "info" ? "bg-blue-50 border-blue-500" : "bg-red-50 border-red-500";
+    const text = type === "success" ? "text-green-800" : type === "info" ? "text-blue-800" : "text-red-800";
+    const safeMessage = sanitizeHtml(message);
 
   return (
     <div className="fixed top-6 right-6 z-50 animate-notifSlide">
@@ -72,7 +73,7 @@ function SuccessNotification({ message, onClose, type = "success" }) {
           )}
         </div>
         <div className="flex-1">
-          <p className={`text-sm font-semibold ${text}`}>{message}</p>
+            <div className={`text-sm font-semibold ${text}`} dangerouslySetInnerHTML={{ __html: safeMessage }} />
         </div>
         <button onClick={onClose} className="text-gray-600 hover:text-gray-800 transition-colors" aria-label="Fermer notification">✕</button>
       </div>
@@ -95,7 +96,8 @@ function ConfirmDialog({ title, message, onConfirm, onCancel, confirmLabel = "Ou
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white rounded-lg p-5 max-w-sm w-full shadow-lg animate-scaleUp">
         <h3 className="text-lg font-bold mb-2">{title}</h3>
-        <p className="text-sm text-gray-600 mb-4">{message}</p>
+        const safeMsg = sanitizeHtml(message);
+        <div className="text-sm text-gray-600 mb-4" dangerouslySetInnerHTML={{ __html: safeMsg }} />
         <div className="flex justify-end gap-3">
           <button onClick={onCancel} disabled={loading} className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 transition">
             {cancelLabel}
