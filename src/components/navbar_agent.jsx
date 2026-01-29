@@ -51,7 +51,6 @@ export default function NavbarAgent({ children, sidebarOpen = true, onSidebarTog
 
         <nav className="px-2 py-4 flex-1 flex flex-col gap-1">
           <NavItem to="/dashboard" label="Accueil" sidebarOpen={open} icon={HomeIcon} />
-          <NavItem to="/groupe-login" label="Gestion des utilisateurs" sidebarOpen={open} icon={UserIcon} />
           <NavItem to="/users" label="Gestion des accès utilisateurs" sidebarOpen={open} icon={UserIcon} />
           <NavItem to="/alertes" label="Gestion des alertes" sidebarOpen={open} icon={AlertIcon} />
           <NavItem to="/gestion-des-bornes-wifi" label="Gestion des bornes Wi‑Fi" sidebarOpen={open} icon={AntennaIcon} />
