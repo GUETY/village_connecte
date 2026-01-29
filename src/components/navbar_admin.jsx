@@ -17,13 +17,13 @@ export default function NavbarAdmin({ children, sidebarOpen = true, onSidebarTog
       <aside
         id="navbar-admin"
         className={`fixed left-0 top-0 h-screen z-50 transition-all duration-300 text-white ${
-          open ? "w-72" : "w-24"
+          open ? "w-[19rem]" : "w-24"
         } overflow-y-auto`}
         style={{ background: "#5B1FB4" }}
         aria-label="Barre latérale admin"
       >
         <div className="flex items-center gap-3 px-4 py-4 border-b border-white/10">
-          <div className={`rounded-full overflow-hidden bg-white ${open ? "w-10 h-10" : "w-12 h-12"}`} aria-hidden>
+          <div className={`rounded-full overflow-hidden bg-white ${open ? "w-10 h-10" : "w-9 h-9"}`} aria-hidden>
             <img src="/logo-village.jpeg" alt="Village Connect" className="w-full h-full object-cover" />
           </div>
           <button
@@ -32,7 +32,7 @@ export default function NavbarAdmin({ children, sidebarOpen = true, onSidebarTog
             aria-label="Toggle sidebar"
           >
             <svg
-              className="w-5 h-5 icon-strong hover:scale-125 transition-transform"
+              className="w-5 h-5 icon-strong hover:scale-105 transition-transform"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -44,12 +44,12 @@ export default function NavbarAdmin({ children, sidebarOpen = true, onSidebarTog
                 open ? "opacity-100" : "opacity-0 hidden"
               }`}
             >
-              Menu Admin
+              Menu
             </span>
           </button>
         </div>
 
-        <nav className="px-2 py-4 flex-1 flex flex-col gap-1">
+        <nav className="px-2 py-4 flex-1 flex flex-col gap-2">
           <NavItem to="/dashboard" label="Accueil" sidebarOpen={open} icon={HomeIcon} />
           <NavItem to="/groupe-login" label="Gestion des utilisateurs" sidebarOpen={open} icon={UserIcon} />
           <NavItem to="/users" label="Gestion des accès utilisateurs" sidebarOpen={open} icon={UserIcon} />
@@ -63,7 +63,7 @@ export default function NavbarAdmin({ children, sidebarOpen = true, onSidebarTog
         </nav>
       </aside>
 
-      <div className={`flex-1 flex flex-col relative transition-all duration-300 ${open ? "ml-72" : "ml-24"}`} style={{ paddingTop: "var(--vc-header-height)" }}>
+      <div className={`flex-1 flex flex-col relative transition-all duration-300 ${open ? "ml-[19rem]" : "ml-24"}`} style={{ paddingTop: "var(--vc-header-height)" }}>
         <div className="fixed top-0 left-0 right-0 z-40" style={{ height: "var(--vc-header-height)" }}>
           <Header sidebarOpen={open} />
         </div>
@@ -87,13 +87,13 @@ function NavItem({ to, label, sidebarOpen, icon: Icon }) {
       }}
       className={({ isActive }) =>
         `flex items-center gap-3 px-3 py-2 rounded transition-colors duration-200 hover:bg-white/6 ${
-          isActive ? "text-red-500 font-semibold" : "text-white"
+          isActive ? "text-red-500 font-semibold bg-white/6" : "text-white"
         }`
       }
       title={!sidebarOpen ? label : ""}
     >
-      {Icon && <Icon className="w-5 h-5 flex-shrink-0" />}
-      <span className={`text-sm whitespace-nowrap transition-all duration-200 ${sidebarOpen ? "opacity-100" : "opacity-0 hidden"}`}>
+      {Icon && <Icon className="w-6 h-6 flex-shrink-0 text-white" />}
+      <span className={`text-base whitespace-nowrap transition-all duration-200 ${sidebarOpen ? "opacity-100" : "opacity-0 hidden"}`}>
         {label}
       </span>
     </NavLink>

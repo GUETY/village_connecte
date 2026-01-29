@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Header({ sidebarOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname || "/";
+  const lcPath = String(path || "").toLowerCase();
   const [showLogoutMenu, setShowLogoutMenu] = useState(false);
 
   const [now, setNow] = useState(new Date());
@@ -35,8 +37,18 @@ export default function Header({ sidebarOpen }) {
   // priorité : correspondance exacte, sinon détection par mots-clés
   let displayTitle = routeTitleMap[path] || "Tableau de bord administrateur ";
 
+  // Role-based title for dashboard
+  const { role } = useAuth() || {};
+  const normalizedRole = (role || "").toString().toLowerCase();
+  if (lcPath.includes("dashboard")) {
+    if (normalizedRole.includes("agent")) {
+      displayTitle = "Tableau de bord agent";
+    } else {
+      displayTitle = "Tableau de bord administrateur";
+    }
+  }
+
   // Détection par sous-chaîne (insensible à la casse)
-  const lcPath = String(path || "").toLowerCase();
   if (lcPath.includes("users") || lcPath.includes("acces") || lcPath.includes("utilisateurs")) {
     displayTitle = "Gestion des accès utilisateurs";
   }
@@ -78,7 +90,7 @@ export default function Header({ sidebarOpen }) {
       style={{
         left: sidebarOpen ? "18rem" : "6rem",
         right: 0,
-        background: "linear-gradient(90deg, #5B1FB4 0%, #5B1FB4 100%)",
+        backgroundColor: "#5B1FB4",
         boxShadow: "0 4px 10px rgba(0,0,0,0.18)",
       }}
     >
