@@ -1,0 +1,23 @@
+services:
+  village-connecte:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    container_name: village-connecte
+    restart: unless-stopped
+    networks:
+      - traefik-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-network"
+      - "traefik.http.routers.village-connecte.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.village-connecte.entrypoints=websecure"
+      - "traefik.http.routers.village-connecte.tls.certresolver=letsencrypt"
+      - "traefik.http.services.village-connecte.loadbalancer.server.port=80"
+
+networks:
+  traefik-network:
+    external: true
